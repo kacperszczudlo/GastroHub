@@ -22,9 +22,33 @@
 * **Zarządzanie menu:** Dodawanie potraw, zmiana cen.
 * **Zarządzanie rezerwacjami:** Ręczne odwoływanie rezerwacji klientów.
 
-## 3. Proponowany stos technologiczny
+## 3. Stos technologiczny (MERN)
+* **Frontend:** React.js (Vite)
+* **Backend:** Node.js, Express.js (REST API)
+* **Baza danych:** MongoDB (Mongoose)
+* **Bezpieczeństwo:** JSON Web Tokens (JWT) dla ról i autoryzacji
 
-* **Frontend:** React.js
-* **Backend:** Node.js wraz z frameworkiem Express (własne REST API)
-* **Baza danych:** MongoDB
-* **Autoryzacja:** JSON Web Tokens (JWT) do zabezpieczenia endpointów i podziału na role
+---
+
+## 4. Architektura i Diagramy (Project Setup)
+
+### Model Przypadków Użycia
+```mermaid
+useCaseDiagram
+    actor "Klient" as C
+    actor "Kelner" as K
+    actor "Administrator" as A
+
+    C --> (Logowanie i Rejestracja)
+    C --> (Przeglądanie menu)
+    C --> (Automatyczna rezerwacja stolika)
+    
+    K --> (Logowanie i Rejestracja)
+    K --> (Podgląd interaktywnej sali)
+    K --> (Obsługa zamówień POS)
+    K --> (Grafik pracy)
+    
+    A --> (Logowanie i Rejestracja)
+    A --> (Zarządzanie menu CRUD)
+    A --> (Konfiguracja układu stolików)
+    A --> (Anulowanie rezerwacji)
