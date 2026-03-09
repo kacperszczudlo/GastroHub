@@ -1,30 +1,71 @@
 # Projekt: GastroHub
+
 **Przedmiot:** Technologie Aplikacji Webowych II  
 **Autorzy:** Kacper Szczudło, Piotr Cebula
 
 ## 1. Opis Projektu
+
 **GastroHub** to kompleksowa aplikacja webowa do zarządzania restauracją. Łączy ona w sobie automatyczny system rezerwacji stolików dla klientów oraz panel obsługi i system POS (Point of Sale) dla personelu lokalu. Zrezygnowaliśmy z wyboru konkretnych stolików przez klientów na rzecz automatycznego przydziału, co zoptymalizuje obłożenie sali.
 
 ## 2. Podział na role i zakres funkcjonalny
 
 ### 👤 Klient
-* **Menu:** Dostęp do aktualnego menu po zalogowaniu.
-* **Rezerwacje:** Składanie rezerwacji poprzez podanie jedynie daty, godziny oraz liczby osób. System automatycznie przydziela odpowiedni stolik na podstawie dostępności.
+- Dostęp do aktualnego menu po zalogowaniu
+- Składanie rezerwacji (data, godzina, liczba osób → automatyczny przydział stolika)
+- Podgląd historii własnych rezerwacji
 
-### 🤵 Kelner (User)
-* **Podgląd sali:** Dostęp do interaktywnego, kafelkowego podglądu sali.
-* **Zarządzanie stolikami:** Oznaczanie na żywo stolików jako zajęte (goście z "ulicy") i przypisywanie się do ich obsługi.
-* **System POS:** Składanie zamówień (dodawanie potraw z menu) i podsumowanie kwoty rachunku.
-* **Grafik pracy:** Dostęp do kalendarza w celu zaznaczania swojej obecności w pracy.
+### 🤵 Kelner
+- Interaktywny podgląd sali (kafelki + statusy stolików)
+- Przypisywanie się do stolika i oznaczanie stolików „z ulicy”
+- System POS – otwieranie rachunku, dodawanie pozycji, zamykanie zamówienia
+- Grafik pracy (deklarowanie dyspozycyjności)
 
-### 👑 Administrator (Właściciel)
-* **Zarządzanie układem sali:** Ustalanie liczby stolików i ich pojemności.
-* **Zarządzanie menu:** Dodawanie potraw, zmiana cen.
-* **Zarządzanie rezerwacjami:** Ręczne odwoływanie rezerwacji klientów.
+### 👑 Administrator
+- Zarządzanie menu (CRUD)
+- Konfiguracja układu stolików (liczba, pojemność)
+- Zarządzanie wszystkimi rezerwacjami (m.in. anulowanie)
+- (opcjonalnie) podgląd grafików kelnerów
 
-## 3. Proponowany stos technologiczny
+## 3. Stos technologiczny (MERN)
 
-* **Frontend:** React.js
-* **Backend:** Node.js wraz z frameworkiem Express (własne REST API)
-* **Baza danych:** MongoDB
-* **Autoryzacja:** JSON Web Tokens (JWT) do zabezpieczenia endpointów i podziału na role
+- **Frontend:** React.js (Vite)
+- **Backend:** Node.js + Express.js (REST API)
+- **Baza danych:** MongoDB + Mongoose
+- **Autentykacja/autoryzacja:** JWT + role (client / waiter / admin)
+
+## 4. Architektura i Diagramy
+
+### Model Przypadków Użycia
+
+```mermaid
+flowchart LR
+    subgraph " "
+        C("👤 Klient"):::actor
+        K("👤 Kelner"):::actor
+        A("👑 Administrator"):::actor
+    end
+
+    subgraph "System GastroHub"
+        UC1("🔐 Logowanie i Rejestracja")
+        UC2("🍽️ Przeglądanie menu")
+        UC3("📅 Automatyczna rezerwacja stolika")
+        UC4("🪑 Podgląd interaktywnej sali")
+        UC5("💳 Obsługa zamówień POS")
+        UC6("🗓️ Grafik pracy")
+        UC7("📋 Zarządzanie menu CRUD")
+        UC8("🪑 Konfiguracja układu stolików")
+        UC9("❌ Anulowanie rezerwacji")
+    end
+
+    C --> UC1 & UC2 & UC3
+    K --> UC1 & UC4 & UC5 & UC6
+    A --> UC1 & UC7 & UC8 & UC9
+
+    classDef actor fill:#e6f3ff,stroke:#0066cc,stroke-width:2px
+    classDef usecase fill:#fffacd,stroke:#cc9900,stroke-width:1.5px
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9 usecase
+```
+
+### Diagram ERD (Entity Relationship Diagram)
+
+![Diagram ERD bazy danych](docs/DiagramERD.png)
