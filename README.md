@@ -38,31 +38,34 @@
 ### Model Przypadków Użycia
 
 ```mermaid
-usecaseDiagram
-    actor "Klient" as C
-    actor "Kelner" as K
-    actor "Administrator" as A
+flowchart LR
+    subgraph " "
+        C("👤 Klient"):::actor
+        K("👤 Kelner"):::actor
+        A("👑 Administrator"):::actor
+    end
 
-    usecase "Logowanie i Rejestracja" as UC1
-    usecase "Przeglądanie menu" as UC2
-    usecase "Automatyczna rezerwacja stolika" as UC3
-    usecase "Podgląd interaktywnej sali" as UC4
-    usecase "Obsługa zamówień POS" as UC5
-    usecase "Grafik pracy" as UC6
-    usecase "Zarządzanie menu CRUD" as UC7
-    usecase "Konfiguracja układu stolików" as UC8
-    usecase "Anulowanie rezerwacji" as UC9
+    subgraph "System GastroHub"
+        UC1("🔐 Logowanie i Rejestracja")
+        UC2("🍽️ Przeglądanie menu")
+        UC3("📅 Automatyczna rezerwacja stolika")
+        UC4("🪑 Podgląd interaktywnej sali")
+        UC5("💳 Obsługa zamówień POS")
+        UC6("🗓️ Grafik pracy")
+        UC7("📋 Zarządzanie menu CRUD")
+        UC8("🪑 Konfiguracja układu stolików")
+        UC9("❌ Anulowanie rezerwacji")
+    end
 
-    C --> UC1
-    C --> UC2
-    C --> UC3
+    C --> UC1 & UC2 & UC3
+    K --> UC1 & UC4 & UC5 & UC6
+    A --> UC1 & UC7 & UC8 & UC9
 
-    K --> UC1
-    K --> UC4
-    K --> UC5
-    K --> UC6
+    classDef actor fill:#e6f3ff,stroke:#0066cc,stroke-width:2px
+    classDef usecase fill:#fffacd,stroke:#cc9900,stroke-width:1.5px
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9 usecase
+```
 
-    A --> UC1
-    A --> UC7
-    A --> UC8
-    A --> UC9
+### Diagram ERD (Entity Relationship Diagram)
+
+![Diagram ERD bazy danych](docs/DiagramERD.png)
