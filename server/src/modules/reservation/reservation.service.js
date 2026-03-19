@@ -1,0 +1,1 @@
+// Logika dobierania stolików

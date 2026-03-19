@@ -1,0 +1,1 @@
+// Logika otwierania rachunku, liczenia kwoty (totalAmount)
