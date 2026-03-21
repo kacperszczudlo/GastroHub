@@ -76,6 +76,82 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Menu",
+      "item": [
+        {
+          "name": "Add Menu Item (Success)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQwOTE5MTUsImV4cCI6MTc3NDA5NTUxNX0.2iHbZWaZPQjK4AhtYXplcR7EouSoryZsXqUtkRXK-GM",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Burger Drwala\",\n  \"description\": \"Wołowina, bekon, ser, sos\",\n  \"price\": 45.00,\n  \"category\": \"Dania Główne\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/menu",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "menu"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "add Menu Item (Fail - No Token)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Burger Drwala\",\n  \"description\": \"Wołowina, bekon, ser, sos\",\n  \"price\": 45.00,\n  \"category\": \"Dania Główne\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/menu",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "menu"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
