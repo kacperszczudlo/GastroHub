@@ -44,7 +44,7 @@ W tym pliku znajdują się przykłady podstawowych zapytań do naszego API. Peł
     "category": "Dania Główne"
   }
   ```
-* **Oczekiwana odpowiedź:** `201 Created` oraz obiekt z komunikatem: `Dodaj nową pozycję menu`.
+* **Oczekiwana odpowiedź:** `201 Created` oraz obiekt z komunikatem o utworzeniu pozycji menu.
 
 ### Dodanie Pozycji Menu (Fail - bez tokena)
 * **URL:** `/api/menu`
@@ -60,3 +60,101 @@ W tym pliku znajdują się przykłady podstawowych zapytań do naszego API. Peł
   }
   ```
 * **Oczekiwana odpowiedź:** `401 Unauthorized` oraz obiekt błędu: `Brak tokenu autoryzacyjnego`.
+
+### Dodanie Pozycji Menu (drugi przykład z kolekcji)
+* **URL:** `/api/menu`
+* **Metoda:** `POST`
+* **Autoryzacja:** `Bearer Token` (wymagana rola `admin`)
+* **Body (JSON):**
+  ```json
+  {
+    "name": "Krem z pomidorów",
+    "description": "Z grzankami i bazylią",
+    "price": 18.50,
+    "category": "Zupy"
+  }
+  ```
+* **Oczekiwana odpowiedź:** `201 Created` oraz obiekt z utworzoną pozycją menu.
+
+### Pobranie Wszystkich Pozycji Menu
+* **URL:** `/api/menu`
+* **Metoda:** `GET`
+* **Autoryzacja:** `Bearer Token` (zgodnie z testem w kolekcji)
+* **Body:** brak
+* **Oczekiwana odpowiedź:** `200 OK` oraz lista pozycji menu.
+
+### Aktualizacja Pozycji Menu
+* **URL:** `/api/menu/:id`
+* **Metoda:** `PUT`
+* **Autoryzacja:** `Bearer Token` (zgodnie z testem w kolekcji)
+* **Przykładowe URL z kolekcji:** `/api/menu/69bed9de02539b9403c54070`
+* **Body (JSON):**
+  ```json
+  {
+    "price": 90.00
+  }
+  ```
+* **Oczekiwana odpowiedź:** `200 OK` oraz obiekt z zaktualizowaną pozycją menu.
+
+### Usunięcie Pozycji Menu
+* **URL:** `/api/menu/:id`
+* **Metoda:** `DELETE`
+* **Autoryzacja:** `Bearer Token` (zgodnie z testem w kolekcji)
+* **Przykładowe URL z kolekcji:** `/api/menu/69bed9de02539b9403c54070`
+* **Body:** brak
+* **Oczekiwana odpowiedź:** `200 OK` oraz potwierdzenie usunięcia pozycji menu.
+
+## 3. Stoliki (Tables)
+
+### Dodanie Stolika
+* **URL:** `/api/tables`
+* **Metoda:** `POST`
+* **Autoryzacja:** `Bearer Token` (wymagana rola `admin`)
+* **Body (JSON):**
+  ```json
+  {
+    "tableNumber": 4,
+    "capacity": 8
+  }
+  ```
+* **Oczekiwana odpowiedź:** `201 Created` oraz obiekt z utworzonym stolikiem.
+
+## 4. Rezerwacje (Reservations)
+
+### Dodanie Rezerwacji
+* **URL:** `/api/reservations`
+* **Metoda:** `POST`
+* **Autoryzacja:** `Bearer Token` (wymagane zalogowanie)
+* **Body (JSON):**
+  ```json
+  {
+    "reservationDate": "2026-03-25",
+    "startTime": "18:00",
+    "endTime": "20:00",
+    "numberOfGuests": 4
+  }
+  ```
+* **Oczekiwana odpowiedź:** `201 Created` oraz obiekt z utworzoną rezerwacją.
+
+### Dodanie Rezerwacji (Fail - Stolik Zajęty)
+* **URL:** `/api/reservations`
+* **Metoda:** `POST`
+* **Autoryzacja:** `Bearer Token` (wymagane zalogowanie)
+* **Body (JSON):**
+  ```json
+  {
+    "reservationDate": "2026-03-25",
+    "startTime": "18:00",
+    "endTime": "20:00",
+    "numberOfGuests": 4
+  }
+  ```
+* **Oczekiwana odpowiedź:** `404 Not Found` oraz komunikat o niedostępności stolika na podany termin.
+
+### Anulowanie Rezerwacji
+* **URL:** `/api/reservations/:id`
+* **Metoda:** `DELETE`
+* **Autoryzacja:** `Bearer Token` (wymagane zalogowanie)
+* **Przykładowe URL z kolekcji:** `/api/reservations/69bee6365fa39e47bf9338d1`
+* **Body:** brak
+* **Oczekiwana odpowiedź:** `200 OK` oraz potwierdzenie anulowania rezerwacji.

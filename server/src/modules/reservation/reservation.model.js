@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema({
+const reservationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     tableId: { type: mongoose.Schema.Types.ObjectId, ref: 'Table', required: true },
     reservationDate: { type: Date, required: true },
@@ -10,4 +10,4 @@ const userSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'active', 'cancelled'], default: 'active' }
 }, { timestamps: true });
 
-export default mongoose.model("Reservation", userSchema);
+export default mongoose.model("Reservation", reservationSchema);

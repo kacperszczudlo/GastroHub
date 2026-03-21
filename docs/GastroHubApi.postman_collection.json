@@ -81,6 +81,38 @@
       "name": "Menu",
       "item": [
         {
+          "name": "Add Menu Item (Fail - No Token)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Burger Drwala\",\n  \"description\": \"Wołowina, bekon, ser, sos\",\n  \"price\": 45.00,\n  \"category\": \"Dania Główne\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/menu",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "menu"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Add Menu Item (Success)",
           "request": {
             "auth": {
@@ -120,16 +152,23 @@
           "response": []
         },
         {
-          "name": "add Menu Item (Fail - No Token)",
+          "name": "Add Menu Item",
           "request": {
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMTUwODksImV4cCI6MTc3NDExODY4OX0.9u8wfu_UgXL_JYynIUljkvmV4Rqv4vxtxKki0NIuTwU",
+                  "type": "string"
+                }
+              ]
             },
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Burger Drwala\",\n  \"description\": \"Wołowina, bekon, ser, sos\",\n  \"price\": 45.00,\n  \"category\": \"Dania Główne\"\n}",
+              "raw": "{\n    \"name\" : \"Krem z pomidorów\",\n    \"description\": \"Z grzankami i bazylią\",\n    \"price\": 18.50,\n    \"category\": \"Zupy\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -146,6 +185,290 @@
               "path": [
                 "api",
                 "menu"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Menu Items",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMTUwODksImV4cCI6MTc3NDExODY4OX0.9u8wfu_UgXL_JYynIUljkvmV4Rqv4vxtxKki0NIuTwU",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\" : \"Krem z pomidorów\",\n    \"description\": \"Z grzankami i bazylią\",\n    \"price\": 18.50,\n    \"category\": \"Zupy\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/menu",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "menu"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Menu Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMTUwODksImV4cCI6MTc3NDExODY4OX0.9u8wfu_UgXL_JYynIUljkvmV4Rqv4vxtxKki0NIuTwU",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"price\": 90.00\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/menu/69bed9de02539b9403c54070",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "menu",
+                "69bed9de02539b9403c54070"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Menu Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMTUwODksImV4cCI6MTc3NDExODY4OX0.9u8wfu_UgXL_JYynIUljkvmV4Rqv4vxtxKki0NIuTwU",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/menu/69bed9de02539b9403c54070",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "menu",
+                "69bed9de02539b9403c54070"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tables",
+      "item": [
+        {
+          "name": "Add Table Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMTg5NzcsImV4cCI6MTc3NDEyMjU3N30.j28PujYe24iyg5-6N2S-XLMbFVvqEq8MO-6pyX5ouCg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tableNumber\": 4,\n  \"capacity\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/tables",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "tables"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reservations",
+      "item": [
+        {
+          "name": "Add Reservation Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMTUwODksImV4cCI6MTc3NDExODY4OX0.9u8wfu_UgXL_JYynIUljkvmV4Rqv4vxtxKki0NIuTwU",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservationDate\": \"2026-03-25\",\n  \"startTime\": \"18:00\",\n  \"endTime\": \"20:00\",\n  \"numberOfGuests\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/reservations",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "reservations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Reservation Item ( Fail - Table Taken )",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMTg5NzcsImV4cCI6MTc3NDEyMjU3N30.j28PujYe24iyg5-6N2S-XLMbFVvqEq8MO-6pyX5ouCg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservationDate\": \"2026-03-25\",\n  \"startTime\": \"18:00\",\n  \"endTime\": \"20:00\",\n  \"numberOfGuests\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/reservations",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "reservations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Reservation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMTg5NzcsImV4cCI6MTc3NDEyMjU3N30.j28PujYe24iyg5-6N2S-XLMbFVvqEq8MO-6pyX5ouCg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/reservations/69bee6365fa39e47bf9338d1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "reservations",
+                "69bee6365fa39e47bf9338d1"
               ]
             }
           },
