@@ -158,3 +158,36 @@ W tym pliku znajdują się przykłady podstawowych zapytań do naszego API. Peł
 * **Przykładowe URL z kolekcji:** `/api/reservations/69bee6365fa39e47bf9338d1`
 * **Body:** brak
 * **Oczekiwana odpowiedź:** `200 OK` oraz potwierdzenie anulowania rezerwacji.
+
+## 5. Zamowienia (Order)
+
+### Dodanie Zamowienia
+* **URL:** `/api/orders`
+* **Metoda:** `POST`
+* **Autoryzacja:** `Bearer Token` (wymagane zalogowanie)
+* **Body (JSON):**
+  ```json
+  {
+    "items": [
+      {
+        "menuItemId": "69bedd186ef7c39ad2981284",
+        "quantity": 2
+      }
+    ],
+    "totalPrice": 100.00
+  }
+  ```
+* **Oczekiwana odpowiedz:** `201 Created` oraz obiekt z utworzonym zamowieniem.
+
+### Aktualizacja Statusu Zamowienia
+* **URL:** `/api/orders/:id/status`
+* **Metoda:** `PUT`
+* **Autoryzacja:** `Bearer Token` (wymagane zalogowanie)
+* **Przykladowe URL z kolekcji:** `/api/orders/69bef31cf5dd18d0da1594e5/status`
+* **Body (JSON):**
+  ```json
+  {
+    "status": "preparing"
+  }
+  ```
+* **Oczekiwana odpowiedz:** `200 OK` oraz obiekt ze zaktualizowanym statusem zamowienia.

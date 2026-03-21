@@ -475,6 +475,91 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Order",
+      "item": [
+        {
+          "name": "Add Order Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMTg5NzcsImV4cCI6MTc3NDEyMjU3N30.j28PujYe24iyg5-6N2S-XLMbFVvqEq8MO-6pyX5ouCg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"items\": [\n        {\n            \"menuItemId\":\"69bedd186ef7c39ad2981284\",\n            \"quantity\": 2\n        }\n    ],\n    \"totalPrice\": 100.00\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/orders",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Order Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJlN2U4MDcwMjJhOGUyNmQxNGQ5OTIiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzQxMzQ1NTEsImV4cCI6MTc3NDEzODE1MX0.XSr1cDjwWzeaNNrMoapAVPeXq4xdd0RYCm2awxR9dxk",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"preparing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/orders/69bef31cf5dd18d0da1594e5/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "orders",
+                "69bef31cf5dd18d0da1594e5",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
