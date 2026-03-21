@@ -6,7 +6,7 @@ const router = Router();
 
 router.get("/", menuController.getAllMenuItems);
 router.post("/", protect, authorize(["admin"]), menuController.createMenuItem);
-router.put("/:id", menuController.updateMenuItem);
-router.delete("/:id", menuController.deleteMenuItem);
+router.put("/:id", protect, authorize(["admin"]), menuController.updateMenuItem);
+router.delete("/:id", protect, authorize(["admin"]), menuController.deleteMenuItem);
 
 export default router;
