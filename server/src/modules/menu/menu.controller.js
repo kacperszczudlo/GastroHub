@@ -1,60 +1,39 @@
-import MenuItem from "./menu.model.js";
+import * as menuService from "./menu.service.js";
 
 export const getAllMenuItems = async (req, res) => {
     try {
-        const items = await MenuItem.find();
-        res.status(200).json({ items });
+        const result = await menuService.getAllMenuItems();
+        res.status(200).json(result);
     } catch (error) {
-        res.status(500).json({ error: "Błąd serwera" });
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera" });
     }
 }
 
 export const createMenuItem = async (req, res) => {
-    
     try{
-        const { name, price, description, category, isAvailable } = req.body;
-
-        if (!name || !price || !category) {
-            return res.status(400).json({ message: "Nazwa, cena i kategoria są wymagane" });
-        }
-
-        const newMenuItem = new MenuItem({
-            name,
-            price,
-            description,
-            category,
-            isAvailable: isAvailable !== undefined ? isAvailable : true
-        });
-
-        const savedItem = await newMenuItem.save();
-        res.status(201).json({ message: "Pozycja menu została utworzona", data: savedItem });
+        const result = await menuService.createMenuItem(req.body);
+        res.status(201).json(result);
     }
     catch (error) {
-        res.status(500).json({ error: "Błąd serwera podczas tworzenia pozycji menu"});
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas tworzenia pozycji menu" });
     }
 }
 
 export const updateMenuItem = async (req, res) => {
     try{
-        const updatedItem = await MenuItem.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!updatedItem) {
-            return res.status(404).json({ message: "Pozycja menu nie znaleziona" });
-        }
-        res.status(200).json({ message: "Pozycja menu została zaktualizowana", data: updatedItem });
+        const result = await menuService.updateMenuItem(req.params.id, req.body);
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ error: "Błąd serwera podczas aktualizacji pozycji menu" });
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas aktualizacji pozycji menu" });
     }
 }
 
 export const deleteMenuItem = async (req, res) => {
     try {
-        const deletedItem = await MenuItem.findByIdAndDelete(req.params.id);
-        if (!deletedItem) {
-            return res.status(404).json({ message: "Pozycja menu nie znaleziona" });
-        }
-        res.status(200).json({ message: "Pozycja menu została usunięta", data: deletedItem });
+        const result = await menuService.deleteMenuItem(req.params.id);
+        res.status(200).json(result);
     } catch (error) {
-        res.status(500).json({ error: "Błąd serwera podczas usuwania pozycji menu" });
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas usuwania pozycji menu" });
     }
 }

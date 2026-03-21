@@ -1,57 +1,40 @@
-import Table from "./table.model.js";
+import * as tableService from "./table.service.js";
 
 export const getAllTables = async (req, res) => {
     try{
-        const tables = await Table.find();
-        res.status(200).json({ tables });
+        const result = await tableService.getAllTables();
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ error: "Błąd serwera podczas pobierania stolików" });
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas pobierania stolików" });
     }
 }
 
 export const createTable = async (req, res) => {
     try{
-        const { tableNumber, capacity } = req.body;
-        if (!tableNumber || !capacity) {
-            return res.status(400).json({ message: "Numer i pojemność są wymagane" });
-        }
-
-        const existingTable = await Table.findOne({ tableNumber });
-        if (existingTable) {
-            return res.status(400).json({ message: "Stolik o numerze ${tableNumber} już istnieje" });
-        }
-        
-        const newTable = new Table({ tableNumber, capacity });
-        const savedTable = await newTable.save();
-        res.status(201).json({ message: "Stolik został utworzony", data: savedTable });
+        const result = await tableService.createTable(req.body);
+        res.status(201).json(result);
     }
     catch (error) {
-        res.status(500).json({ error: "Błąd serwera podczas tworzenia stolika" });
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas tworzenia stolika" });
     }
 }
 
 export const updateTable = async (req, res) => {
     try{
-        const updatedTable = await Table.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!updatedTable) {
-            return res.status(404).json({ message: "Stolik nie znaleziona" });
-        }
-        res.status(200).json({ message: "Stolik został zaktualizowany", data: updatedTable });
+        const result = await tableService.updateTable(req.params.id, req.body);
+        res.status(200).json(result);
     }
     catch (error) {
-        res.status(500).json({ error: "Błąd serwera podczas aktualizacji stolika" });
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas aktualizacji stolika" });
     }
 }
 
 export const deleteTable = async (req, res) => {
     try {
-        const deletedTable = await Table.findByIdAndDelete(req.params.id);
-        if (!deletedTable) {
-            return res.status(404).json({ message: "Stolik nie znaleziona" });
-        }
-        res.status(200).json({ message: "Stolik został usunięty", data: deletedTable });
+        const result = await tableService.deleteTable(req.params.id);
+        res.status(200).json(result);
     } catch (error) {
-        res.status(500).json({ error: "Błąd serwera podczas usuwania stolika" });
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas usuwania stolika" });
     }
 }
