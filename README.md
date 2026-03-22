@@ -1,5 +1,11 @@
 # Projekt: GastroHub
 
+![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Backend](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?style=flat-square&logo=node.js&logoColor=white)
+![Database](https://img.shields.io/badge/Database-MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
+![API](https://img.shields.io/badge/API-REST-005571?style=flat-square)
+![Security](https://img.shields.io/badge/Security-JWT%20%2B%20Roles-000000?style=flat-square&logo=jsonwebtokens)
+
 **Przedmiot:** Technologie Aplikacji Webowych II  
 **Autorzy:** Kacper Szczudło, Piotr Cebula
 
