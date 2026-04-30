@@ -75,3 +75,4 @@ flowchart LR
 ### Diagram ERD (Entity Relationship Diagram)
 
 ![Diagram ERD bazy danych](docs/DiagramERD.png)
+
