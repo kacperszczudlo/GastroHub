@@ -11,7 +11,7 @@ export const getAllMenuItems = async () => {
 	return { items };
 };
 
-export const createMenuItem = async ({ name, price, description, category, isAvailable }) => {
+export const createMenuItem = async ({ name, price, description, image, category, isAvailable }) => {
 	if (!name || !price || !category) {
 		throw createError(400, "Nazwa, cena i kategoria są wymagane");
 	}
@@ -20,6 +20,7 @@ export const createMenuItem = async ({ name, price, description, category, isAva
 		name,
 		price,
 		description,
+		image,
 		category,
 		isAvailable: isAvailable !== undefined ? isAvailable : true
 	});

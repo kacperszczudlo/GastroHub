@@ -42,7 +42,8 @@ export class TableModel {
       status: statusMap[data.status] || 'free',
       x: data.x || 0,
       y: data.y || 0,
-      waiter: data.waiter || null
+      waiter: data.waiter || null,
+      orderId: (data.orderId?._id || data.orderId || null)?.toString?.() || null
     };
   }
 
@@ -59,7 +60,8 @@ export class TableModel {
       status: statusMap[table.status],
       x: table.x,
       y: table.y,
-      waiter: table.waiter
+      waiter: table.waiter,
+      orderId: table.orderId || null
     };
   }
 }
@@ -70,9 +72,9 @@ export class ReservationModel {
     const statusMap: Record<string, Reservation['status']> = {
       pending: 'pending',
       active: 'accepted',
-      cancelled: 'rejected',
       accepted: 'accepted',
-      rejected: 'rejected'
+      rejected: 'rejected',
+      cancelled: 'cancelled'
     };
 
     const dateSource = data.date || data.reservationDate;
@@ -108,6 +110,7 @@ export class ScheduleModel {
   static fromAPI(data: any): Schedule {
     return {
       id: (data.id || data._id || Date.now()).toString(),
+      _id: data._id?.toString?.() || data.id?.toString?.(),
       date: data.date,
       shift: data.shift,
       waiter: data.waiter

@@ -1,42 +1,130 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarDays, Plus, Minus, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { Schedule } from '../../types';
-import { SHIFTS, WAITERS_LIST, INITIAL_SCHEDULE } from '../../constants';
+import { SHIFTS } from '../../constants';
+import authService from '../../services/auth.service';
+import scheduleService from '../../services/schedule.service';
 
 interface ScheduleViewProps {
   role: string | null;
 }
 
+interface Waiter {
+  _id: string;
+  email: string;
+}
+
 export function ScheduleView({ role }: ScheduleViewProps) {
   const { schedule, setSchedule } = useApp();
+  const { email: currentUserEmail } = useAuth();
   const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState('');
+  const [waiters, setWaiters] = useState<Waiter[]>([]);
+  const [loadingWaiters, setLoadingWaiters] = useState(false);
+
+  // Pobierz schedules z backendu przy mountowaniu
+  useEffect(() => {
+    const loadSchedules = async () => {
+      try {
+        if (role === 'admin') {
+          const all = await scheduleService.getAll();
+          setSchedule(all);
+        } else if (role === 'waiter' && currentUserEmail) {
+          const waiterSchedules = await scheduleService.getByWaiter(currentUserEmail);
+          setSchedule(waiterSchedules);
+        }
+      } catch (err) {
+        console.error('Błąd ładowania grafiów:', err);
+      }
+    };
+    loadSchedules();
+  }, [role, currentUserEmail, setSchedule]);
 
   useEffect(() => {
-    if (schedule.length === 0) {
-      setSchedule(INITIAL_SCHEDULE);
+    // Pobierz listę kelnerów z API
+    if (role === 'admin') {
+      setLoadingWaiters(true);
+      authService.getWaiters()
+        .then(list => {
+          setWaiters(list);
+        })
+        .catch(err => {
+          console.error('Błąd podczas pobierania kelnerów:', err);
+        })
+        .finally(() => {
+          setLoadingWaiters(false);
+        });
     }
-  }, [schedule, setSchedule]);
+  }, [role]);
 
-  const handleAddSchedule = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddSchedule = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const newEntry: Schedule = {
-      id: Date.now().toString(),
-      date: formData.get('date') as string,
-      shift: formData.get('shift') as string,
-      waiter: role === 'waiter' ? 'Jan K. (Ty)' : (formData.get('waiter') as string)
-    };
-    setSchedule([...schedule, newEntry]);
-    setShowForm(false);
+    setError('');
+    
+    try {
+      const formData = new FormData(e.currentTarget);
+      const shiftKey = formData.get('shift') as string;
+      const dateValue = formData.get('date') as string;
+      const newSchedule = {
+        date: new Date(dateValue).toISOString(),
+        shift: shiftKey as 'morning' | 'afternoon' | 'evening',
+        waiter: role === 'waiter' ? (currentUserEmail || '') : (formData.get('waiter') as string)
+      };
+
+      if (!newSchedule.waiter) {
+        setError('Brak wybranego pracownika');
+        return;
+      }
+
+      await scheduleService.create(newSchedule);
+      
+      // Przeładuj harmonogramy z backendu
+      const updated = role === 'admin' 
+        ? await scheduleService.getAll()
+        : await scheduleService.getByWaiter(newSchedule.waiter);
+      
+      setSchedule(updated);
+      setShowForm(false);
+    } catch (err: any) {
+      console.error('Błąd dodawania grafiku:', err);
+      setError(err.response?.data?.error || 'Nie udało się dodać grafiku');
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setSchedule(schedule.filter(s => s.id !== id));
+  const getShiftLabel = (shiftKey: string) => {
+    const shift = SHIFTS.find(s => s.key === shiftKey);
+    return shift?.label || shiftKey;
+  };
+
+  const handleDelete = async (idOrMaybeObj: string | any) => {
+    try {
+      const id = typeof idOrMaybeObj === 'string'
+        ? idOrMaybeObj
+        : (idOrMaybeObj?._id || idOrMaybeObj?.id);
+      if (!id) throw new Error('Brak id grafiku');
+      await scheduleService.delete(id);
+      
+      // Przeładuj harmonogramy z backendu
+      const updated = role === 'admin'
+        ? await scheduleService.getAll()
+        : await scheduleService.getByWaiter(currentUserEmail || '');
+      
+      setSchedule(updated);
+    } catch (err: any) {
+      console.error('Błąd usuwania grafiku:', err);
+      setError(err.response?.data?.error || 'Nie udało się usunąć grafiku');
+    }
   };
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <CalendarDays className="h-6 w-6 text-purple-600" />
@@ -64,8 +152,8 @@ export function ScheduleView({ role }: ScheduleViewProps) {
             <label className="block text-sm font-medium text-gray-700 mb-1">Zmiana</label>
             <select name="shift" required className="w-full p-2 border border-gray-300 rounded-lg">
               {SHIFTS.map(shift => (
-                <option key={shift} value={shift}>
-                  {shift.includes('Poranna') ? 'Poranna (8:00 - 16:00)' : 'Popołudniowa (16:00 - 00:00)'}
+                <option key={shift.key} value={shift.key}>
+                  {shift.label}
                 </option>
               ))}
             </select>
@@ -73,10 +161,11 @@ export function ScheduleView({ role }: ScheduleViewProps) {
           {role === 'admin' && (
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Pracownik</label>
-              <select name="waiter" required className="w-full p-2 border border-gray-300 rounded-lg">
-                {WAITERS_LIST.map(w => (
-                  <option key={w} value={w}>
-                    {w}
+              <select name="waiter" required className="w-full p-2 border border-gray-300 rounded-lg" disabled={loadingWaiters}>
+                <option value="">-- Wybierz pracownika --</option>
+                {waiters.map(w => (
+                  <option key={w._id} value={w.email}>
+                    {w.email}
                   </option>
                 ))}
               </select>
@@ -100,23 +189,23 @@ export function ScheduleView({ role }: ScheduleViewProps) {
           </thead>
           <tbody>
             {schedule.map(s => (
-              <tr key={s.id} className="border-b last:border-0 hover:bg-gray-50">
-                <td className="p-3 font-medium text-gray-900 whitespace-nowrap">{s.date}</td>
+                <tr key={s._id || s.id} className="border-b last:border-0 hover:bg-gray-50">
+                  <td className="p-3 font-medium text-gray-900 whitespace-nowrap">{new Date(s.date).toLocaleDateString()}</td>
                 <td className="p-3 text-gray-700 whitespace-nowrap">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      s.shift.includes('Poranna')
+                      s.shift === 'morning'
                         ? 'bg-blue-100 text-blue-800'
                         : 'bg-indigo-100 text-indigo-800'
                     }`}
                   >
-                    {s.shift}
+                    {getShiftLabel(s.shift)}
                   </span>
                 </td>
                 <td className="p-3 font-medium text-gray-800 whitespace-nowrap">{s.waiter}</td>
                 {role === 'admin' && (
                   <td className="p-3 text-right">
-                    <button onClick={() => handleDelete(s.id)} className="text-red-500 hover:text-red-700 p-1">
+                    <button onClick={() => handleDelete(s._id || s.id)} className="text-red-500 hover:text-red-700 p-1">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </td>

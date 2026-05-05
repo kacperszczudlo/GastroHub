@@ -1,11 +1,12 @@
 import React from 'react';
 import { Calendar } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { CURRENT_CLIENT_NAME } from '../../constants';
+import { useAuth } from '../../context/AuthContext';
 import reservationService from '../../services/reservation.service';
 
 export function ClientReservation() {
   const { setReservations } = useApp();
+  const { email: currentUserEmail } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -17,7 +18,7 @@ export function ClientReservation() {
       guests: parseInt(formData.get('guests') as string),
       status: 'pending' as const,
       tableId: null,
-      clientName: CURRENT_CLIENT_NAME
+      clientName: currentUserEmail || 'Klient'
     };
 
     try {
@@ -25,8 +26,7 @@ export function ClientReservation() {
       setReservations(prev => [...prev, created]);
       alert('Rezerwacja została wysłana do backendu.');
     } catch {
-      setReservations(prev => [...prev, newRes]);
-      alert('Backend chwilowo niedostępny. Rezerwacja zapisana lokalnie.');
+      alert('Nie udało się wysłać rezerwacji do backendu.');
     }
   };
 

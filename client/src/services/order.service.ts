@@ -1,58 +1,61 @@
 import apiService from './api.service';
-import { Schedule } from '../types';
-import { ScheduleModel } from '../models';
+import type { OrderItem } from '../types';
 
-class ScheduleService {
-  async getAll(): Promise<Schedule[]> {
+type OrderPayload = {
+  tableId: string | null;
+  waiter?: string | null;
+  items: Array<{ menuItemId: string; quantity: number }>;
+};
+
+class OrderService {
+  async createOpenOrder(payload: OrderPayload): Promise<any> {
     try {
-      const response = await apiService.getClient().get('/schedule');
-      return response.data.map((item: any) => ScheduleModel.fromAPI(item));
+      const response = await apiService.getClient().post('/orders', payload);
+      return response.data?.data || response.data;
     } catch (error) {
-      console.error('Error fetching schedules:', error);
+      console.error('Error creating order:', error);
       throw error;
     }
   }
 
-  async getByWaiter(waiter: string): Promise<Schedule[]> {
+  async getOpenOrders(): Promise<any[]> {
     try {
-      const response = await apiService.getClient().get('/schedule', {
-        params: { waiter }
+      const response = await apiService.getClient().get('/orders/status/open');
+      return response.data?.orders || [];
+    } catch (error) {
+      console.error('Error fetching open orders:', error);
+      throw error;
+    }
+  }
+
+  async getOpenOrderByTable(tableId: string): Promise<any | null> {
+    try {
+      const response = await apiService.getClient().get('/orders/open', {
+        params: { tableId }
       });
-      return response.data.map((item: any) => ScheduleModel.fromAPI(item));
+      return response.data?.data || null;
     } catch (error) {
-      console.error('Error fetching waiter schedule:', error);
+      console.error('Error fetching open order:', error);
       throw error;
     }
   }
 
-  async create(schedule: Omit<Schedule, 'id'>): Promise<Schedule> {
+  async completeOrder(orderId: string): Promise<any> {
     try {
-      const response = await apiService.getClient().post('/schedule', ScheduleModel.toAPI(schedule as Schedule));
-      return ScheduleModel.fromAPI(response.data);
+      const response = await apiService.getClient().post(`/orders/${orderId}/complete`);
+      return response.data?.data || response.data;
     } catch (error) {
-      console.error('Error creating schedule:', error);
+      console.error('Error completing order:', error);
       throw error;
     }
   }
 
-  async update(id: number, schedule: Schedule): Promise<Schedule> {
-    try {
-      const response = await apiService.getClient().put(`/schedule/${id}`, ScheduleModel.toAPI(schedule));
-      return ScheduleModel.fromAPI(response.data);
-    } catch (error) {
-      console.error('Error updating schedule:', error);
-      throw error;
-    }
-  }
-
-  async delete(id: number): Promise<void> {
-    try {
-      await apiService.getClient().delete(`/schedule/${id}`);
-    } catch (error) {
-      console.error('Error deleting schedule:', error);
-      throw error;
-    }
+  mapToPayload(items: OrderItem[]) {
+    return items.map(item => ({
+      menuItemId: item.id,
+      quantity: item.qty
+    }));
   }
 }
 
-export default new ScheduleService();
+export default new OrderService();

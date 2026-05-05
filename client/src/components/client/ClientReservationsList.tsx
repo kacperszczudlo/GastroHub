@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { CalendarDays, Users, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { CURRENT_CLIENT_NAME } from '../../constants';
+import { useAuth } from '../../context/AuthContext';
 import reservationService from '../../services/reservation.service';
 
 export function ClientReservationsList() {
@@ -12,12 +12,12 @@ export function ClientReservationsList() {
 
     const fetchReservations = async () => {
       try {
-        const allReservations = await reservationService.getAll();
+        const allReservations = await reservationService.getMine();
         if (mounted) {
           setReservations(allReservations);
         }
       } catch {
-        // Client role may not have permission to list all reservations.
+        // Fallback is intentionally omitted so we only use backend-owned data.
       }
     };
 
@@ -28,7 +28,7 @@ export function ClientReservationsList() {
     };
   }, [setReservations]);
 
-  const myReservations = reservations.filter(r => r.clientName === CURRENT_CLIENT_NAME);
+  const myReservations = reservations;
 
   return (
     <div className="max-w-4xl mx-auto p-6 mt-6">
@@ -67,6 +67,10 @@ export function ClientReservationsList() {
                 ) : res.status === 'accepted' ? (
                   <span className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
                     <CheckCircle className="h-4 w-4" /> Potwierdzona
+                  </span>
+                ) : res.status === 'cancelled' ? (
+                  <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    <XCircle className="h-4 w-4" /> Anulowana
                   </span>
                 ) : (
                   <span className="bg-red-100 text-red-800 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">

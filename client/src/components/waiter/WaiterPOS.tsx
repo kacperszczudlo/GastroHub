@@ -1,38 +1,104 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Minus, Trash2, CheckCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Plus, Minus, Trash2, CheckCircle, RefreshCw } from 'lucide-react';
+import { OrderItem, MenuItem } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { OrderItem } from '../../types';
-import { MOCK_MEALS } from '../../constants';
 import menuService from '../../services/menu.service';
+import tableService from '../../services/table.service';
+import orderService from '../../services/order.service';
 
 export function WaiterPOS() {
-  const { menu, setMenu } = useApp();
+  const { menu, setMenu, tables, setTables, selectedTable, setSelectedTable } = useApp();
   const [order, setOrder] = useState<OrderItem[]>([]);
+  const [selectedTableId, setSelectedTableId] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let mounted = true;
 
-    const fetchMenu = async () => {
+    const fetchData = async () => {
       try {
-        const items = await menuService.getAll();
+        setLoading(true);
+        const [items, apiTables] = await Promise.all([
+          menuService.getAll(),
+          tableService.getAll()
+        ]);
         if (mounted) {
           setMenu(items);
+          setTables(apiTables);
+          setSelectedTableId(prev => prev || apiTables[0]?.id || '');
+          setError('');
         }
-      } catch {
+      } catch (err) {
         if (mounted) {
-          setMenu(MOCK_MEALS);
+          setMenu([]);
+          setTables([]);
+          setSelectedTableId('');
+          setError('❌ Nie udało się pobrać danych z backendu. Sprawdź czy serwer API działa.');
+          console.error('Błąd pobierania danych POS:', err);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
         }
       }
     };
 
-    fetchMenu();
+    fetchData();
 
     return () => {
       mounted = false;
     };
-  }, [setMenu]);
+  }, [setMenu, setTables]);
 
-  const addToOrder = (item: any) => {
+  useEffect(() => {
+    if (!selectedTableId) {
+      return;
+    }
+
+    let mounted = true;
+
+    const loadOpenOrder = async () => {
+      try {
+        const existing = await orderService.getOpenOrderByTable(selectedTableId);
+        if (!mounted) {
+          return;
+        }
+
+        if (!existing) {
+          setOrder([]);
+          return;
+        }
+
+        const mappedItems = (existing.items || []).map((item: any) => ({
+          id: item.menuItemId?._id?.toString?.() || item.menuItemId?.toString?.() || item.menuItemId,
+          name: item.menuItemId?.name || item.name || 'Pozycja menu',
+          category: item.menuItemId?.category || 'Menu',
+          price: Number(item.menuItemId?.price || item.price || 0),
+          image: item.menuItemId?.image || item.image || '',
+          desc: item.menuItemId?.description || item.desc || '',
+          qty: item.quantity
+        }));
+
+        setOrder(mappedItems);
+      } catch {
+        if (mounted) {
+          setOrder([]);
+        }
+      }
+    };
+
+    loadOpenOrder();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedTableId]);
+
+  const localSelectedTable = tables.find(table => table.id === selectedTableId) || null;
+
+  const addToOrder = (item: MenuItem) => {
     setOrder(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
@@ -56,16 +122,120 @@ export function WaiterPOS() {
 
   const total = order.reduce((sum, item) => sum + item.price * item.qty, 0);
 
+  const refreshTables = async () => {
+    try {
+      const apiTables = await tableService.getAll();
+      setTables(apiTables);
+      if (selectedTableId) {
+        const updated = apiTables.find(t => t.id === selectedTableId);
+        if (updated) setSelectedTable(updated);
+      }
+    } catch (err) {
+      console.error('Błąd odświeżania stoliów:', err);
+    }
+  };
+
+  const handleSaveAsOpen = async () => {
+    if (!selectedTableId) {
+      setError('Wybierz stolik przed zapisaniem rachunku.');
+      return;
+    }
+
+    if (order.length === 0) {
+      setError('Dodaj pozycje do zamówienia przed zapisem.');
+      return;
+    }
+
+    try {
+      const existingOrder = await orderService.getOpenOrderByTable(selectedTableId);
+      if (existingOrder) {
+        setError('To stolik ma już otwarte zamówienie. Użyj istniejącego rachunku albo zakończ płatność.');
+        return;
+      }
+
+      const payload = {
+        tableId: selectedTableId,
+        waiter: localSelectedTable?.waiter || null,
+        items: orderService.mapToPayload(order)
+      };
+      console.log('Wysyłanie zamówienia:', payload);
+      const created = await orderService.createOpenOrder(payload);
+      console.log('Zamówienie utworzone:', created);
+      setError('');
+      alert('Rachunek zapisano jako otwarty i przypisano do stolika.');
+      await refreshTables();
+    } catch (err: any) {
+      console.error('Błąd podczas zapisywania zamówienia:', err);
+      console.error('Szczegóły błędu:', err.response?.data || err.message);
+      setError(`Błąd: ${err.response?.data?.error || err.response?.data?.details || err.message || 'Nieznany błąd'}`);
+    }
+  };
+
+  const handlePay = async () => {
+    if (order.length === 0) {
+      setError('Rachunek jest pusty!');
+      return;
+    }
+
+    try {
+      const activeOrder = await orderService.getOpenOrderByTable(selectedTableId);
+      const activeOrderId = activeOrder?._id || activeOrder?.id || localSelectedTable?.orderId;
+
+      if (activeOrderId) {
+        console.log('💳 Completing order:', activeOrderId);
+        await orderService.completeOrder(activeOrderId);
+        console.log('✅ Order paid successfully');
+      }
+      setOrder([]);
+      if (selectedTableId) {
+        const updatedTable = await tableService.getById(selectedTableId);
+        setSelectedTable(updatedTable);
+      }
+      setError('');
+      alert(`Zrealizowano płatność na kwotę: ${total.toFixed(2)} zł. Stolik został zwolniony.`);
+      await refreshTables();
+    } catch (err: any) {
+      console.error('Błąd podczas finalizacji płatności:', err);
+      console.error('Szczegóły błędu:', err.response?.data || err.message);
+      setError(`Błąd: ${err.response?.data?.error || err.message || 'Nie udało się zakończyć zamówienia w backendzie.'}`);
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-120px)] bg-gray-200">
       {/* Koszyk */}
       <div className="w-1/3 bg-white flex flex-col shadow-2xl z-10 border-r border-gray-300">
-        <div className="bg-orange-400 text-white p-4 flex justify-between items-center">
+        <div className="bg-orange-400 text-white p-4 flex flex-col gap-2">
           <div>
             <h2 className="text-xl font-bold">Zarządzanie Rachunkiem</h2>
-            <p className="text-orange-100 text-sm">Obsługuje: Jan K. (Ty)</p>
+            <p className="text-orange-100 text-sm">Obsługuje: {localSelectedTable?.waiter || 'Brak przypisania'}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedTableId}
+              onChange={(e) => setSelectedTableId(e.target.value)}
+              className="w-full bg-white text-gray-800 text-sm font-bold py-1 px-2 rounded outline-none"
+            >
+              {tables.map(table => (
+                <option key={table.id} value={table.id}>
+                  Stolik #{table.number}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
+
+        {loading && (
+          <div className="px-4 py-2 text-sm text-gray-500 flex items-center gap-2 border-b">
+            <RefreshCw className="h-4 w-4 animate-spin" /> Ładowanie danych...
+          </div>
+        )}
+
+        {error && (
+          <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {order.length === 0 ? (
@@ -118,16 +288,10 @@ export function WaiterPOS() {
             <span className="text-3xl font-black text-gray-900">{total.toFixed(2)} zł</span>
           </div>
           <div className="flex gap-2">
-            <button className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700 transition">
+            <button onClick={handleSaveAsOpen} className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700 transition">
               Zapisz jako otwarty
             </button>
-            <button
-              onClick={() => {
-                alert(`Zrealizowano płatność na kwotę: ${total.toFixed(2)} zł`);
-                setOrder([]);
-              }}
-              className="flex-1 bg-green-500 text-white font-bold py-3 rounded-lg shadow hover:bg-green-600 transition"
-            >
+            <button onClick={handlePay} className="flex-1 bg-green-500 text-white font-bold py-3 rounded-lg shadow hover:bg-green-600 transition">
               Zakończ / Zapłać
             </button>
           </div>
@@ -136,40 +300,57 @@ export function WaiterPOS() {
 
       {/* Menu */}
       <div className="w-2/3 p-4 overflow-y-auto">
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          {['Pizza', 'Burgery', 'Makarony', 'Napoje'].map(cat => (
-            <div
-              key={cat}
-              className="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer hover:ring-2 ring-orange-400"
+        {/* Dynamiczne kategorie */}
+        <div className="mb-6">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                selectedCategory === null
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+              }`}
             >
-              <div className="h-20 bg-gray-300">
-                <img
-                  src={`https://source.unsplash.com/200x200/?${cat.toLowerCase()}`}
-                  alt={cat}
-                  className="w-full h-full object-cover opacity-80"
-                />
-              </div>
-              <div className="p-2 text-center font-medium text-sm text-gray-700">{cat}</div>
-            </div>
-          ))}
+              Wszystkie
+            </button>
+            {Array.from(new Set(menu.map(item => item.category)))
+              .filter(cat => cat && cat.trim())
+              .sort()
+              .map(category => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    selectedCategory === category
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+          </div>
         </div>
 
+        {/* Menu Items */}
         <div className="grid grid-cols-3 gap-4">
-          {menu.map(item => (
-            <div
-              key={item.id}
-              onClick={() => addToOrder(item)}
-              className="bg-white rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition active:scale-95 flex flex-col h-full"
-            >
-              <div className="h-24 rounded-lg overflow-hidden mb-2 relative">
-                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                <div className="absolute bottom-0 right-0 bg-white px-2 py-1 text-xs font-bold rounded-tl-lg shadow-sm">
-                  {item.price.toFixed(2)} zł
+          {menu
+            .filter(item => !selectedCategory || item.category === selectedCategory)
+            .map(item => (
+              <div
+                key={item.id}
+                onClick={() => addToOrder(item)}
+                className="bg-white rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition active:scale-95 flex flex-col h-full"
+              >
+                <div className="h-24 rounded-lg overflow-hidden mb-2 relative">
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  <div className="absolute bottom-0 right-0 bg-white px-2 py-1 text-xs font-bold rounded-tl-lg shadow-sm">
+                    {item.price.toFixed(2)} zł
+                  </div>
                 </div>
+                <h4 className="font-bold text-sm text-gray-800 leading-tight flex-1">{item.name}</h4>
               </div>
-              <h4 className="font-bold text-sm text-gray-800 leading-tight flex-1">{item.name}</h4>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
     </div>

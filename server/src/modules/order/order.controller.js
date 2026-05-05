@@ -19,6 +19,33 @@ export const getAllOrders = async (req, res) => {
     }
 }
 
+export const getOpenOrders = async (req, res) => {
+    try {
+        const result = await orderService.getOpenOrders();
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas pobierania otwartych zamówień" });
+    }
+}
+
+export const getOpenOrderByTable = async (req, res) => {
+    try {
+        const result = await orderService.getOpenOrderByTable(req.query.tableId);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas pobierania zamówienia" });
+    }
+}
+
+export const completeOrder = async (req, res) => {
+    try {
+        const result = await orderService.completeOrder(req.params.id);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas finalizacji zamówienia" });
+    }
+}
+
 
 export const updateOrderStatus = async (req, res) => {
     try {

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { MenuItem } from '../../types';
-import { MOCK_MEALS } from '../../constants';
 import menuService from '../../services/menu.service';
 
 export function ClientMenu() {
   const { menu, setMenu } = useApp();
   const [activeCat, setActiveCat] = useState<string>('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -16,10 +16,13 @@ export function ClientMenu() {
         const items = await menuService.getAll();
         if (mounted) {
           setMenu(items);
+          setError('');
         }
-      } catch {
+      } catch (err) {
         if (mounted) {
-          setMenu(MOCK_MEALS);
+          setMenu([]);
+          setError('❌ Nie udało się pobrać menu. Sprawdź czy serwer API działa.');
+          console.error('Błąd pobierania menu:', err);
         }
       }
     };
@@ -38,7 +41,12 @@ export function ClientMenu() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="p-6 max-w-7xl mx-auto">
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       <h2 className="text-4xl font-black text-center mt-4 mb-8 uppercase tracking-widest text-gray-800">
         Menu Restauracji
       </h2>

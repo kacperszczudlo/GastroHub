@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { Clock, Check, X } from 'lucide-react';
+import { Clock, Check, X, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import reservationService from '../../services/reservation.service';
+import tableService from '../../services/table.service';
 
 export function AdminReservationsManager() {
-  const { reservations, setReservations, tables } = useApp();
+  const { reservations, setReservations, tables, setTables } = useApp();
 
   useEffect(() => {
     let mounted = true;
@@ -27,32 +28,69 @@ export function AdminReservationsManager() {
     };
   }, [setReservations]);
 
-  const handleAccept = (id: string) => {
-    const freeTable = tables.find(t => t.status === 'free' || t.status === 'reserved');
-    if (freeTable) {
-      setReservations(prev =>
-        prev.map(r => (r.id === id ? { ...r, status: 'accepted', tableId: freeTable.id } : r))
-      );
-      alert('Backend nie wspiera jeszcze endpointu accept/reject. Status zaktualizowano lokalnie.');
-    } else {
-      alert('Brak wolnych stolików w lokalu, zwolnij miejsce na sali.');
+  const handleAccept = async (id: string) => {
+    try {
+      const updated = await reservationService.update(id, { status: 'accepted' });
+      setReservations(prev => prev.map(r => (r.id === id ? updated : r)));
+      // Pobierz świeże tabele (rezerwacja przypisuje stolik)
+      const tables = await tableService.getAll();
+      setTables(tables);
+    } catch {
+      alert('Nie udało się zaakceptować rezerwacji w backendzie.');
     }
   };
 
   const handleReject = async (id: string) => {
     try {
-      await reservationService.delete(id);
-      setReservations(prev => prev.filter(r => r.id !== id));
+      const reservation = reservations.find(r => r.id === id);
+      if (!reservation) return;
+
+      const nextStatus = reservation.status === 'accepted' ? 'cancelled' : 'rejected';
+      const updated = await reservationService.update(id, { status: nextStatus });
+      setReservations(prev => prev.map(r => (r.id === id ? updated : r)));
+      // Pobierz świeże tabele (zwolniony stolik)
+      const tables = await tableService.getAll();
+      setTables(tables);
     } catch {
       alert('Nie udało się anulować rezerwacji w backendzie.');
     }
   };
 
+  const handleHardDelete = async (id: string) => {
+    if (!confirm('Na pewno chcesz trwale usunąć tę rezerwację? To działanie jest nieodwracalne.')) return;
+    try {
+      await reservationService.hardDelete(id);
+      setReservations(prev => prev.filter(r => r.id !== id));
+    } catch {
+      alert('Nie udało się trwale usunąć rezerwacji.');
+    }
+  };
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-        <Clock className="h-6 w-6 text-purple-600" /> Lista Rezerwacji
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <Clock className="h-6 w-6 text-purple-600" /> Lista Rezerwacji
+        </h2>
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              if (!confirm('Usuń wszystkie anulowane rezerwacje starsze niż 90 dni?')) return;
+              try {
+                await reservationService.prune(90);
+                const items = await reservationService.getAll();
+                setReservations(items);
+                alert('Prune zakończony');
+              } catch (err) {
+                alert('Nie udało się wykonać prune rezerwacji');
+              }
+            }}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded"
+          >
+            Prune (usuń stare)
+          </button>
+        </div>
+      </div>
 
       <div className="bg-white shadow-md rounded-xl overflow-x-auto border">
         <table className="min-w-full text-left border-collapse">
@@ -82,9 +120,17 @@ export function AdminReservationsManager() {
                     <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-bold">
                       Oczekująca
                     </span>
-                  ) : (
+                  ) : res.status === 'accepted' ? (
                     <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-bold">
                       Zatwierdzona
+                    </span>
+                  ) : res.status === 'cancelled' ? (
+                    <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-bold">
+                      Anulowana
+                    </span>
+                  ) : (
+                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">
+                      Odrzucona
                     </span>
                   )}
                 </td>
@@ -102,9 +148,16 @@ export function AdminReservationsManager() {
                     <button
                       onClick={() => handleReject(res.id)}
                       className="bg-red-500 hover:bg-red-600 text-white p-1 rounded"
-                      title="Odrzuć/Usuń"
+                      title="Odrzuć/Anuluj"
                     >
                       <X className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleHardDelete(res.id)}
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 p-1 rounded"
+                      title="Usuń trwale"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </td>

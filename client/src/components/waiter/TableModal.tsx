@@ -1,55 +1,114 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Users, CheckCircle, XCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { Table as TableType } from '../../types';
 import tableService from '../../services/table.service';
+import authService from '../../services/auth.service';
+import orderService from '../../services/order.service';
 
 interface TableModalProps {
   role: string | null;
 }
 
+interface Waiter {
+  _id: string;
+  email: string;
+}
+
 export function TableModal({ role }: TableModalProps) {
   const { selectedTable, setSelectedTable, tables, setTables, reservations } = useApp();
+  const { email: currentUserEmail } = useAuth();
+  const [waiters, setWaiters] = useState<Waiter[]>([]);
+  const [loadingWaiters, setLoadingWaiters] = useState(false);
+  const [openOrder, setOpenOrder] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (selectedTable && role === 'admin') {
+      setLoadingWaiters(true);
+      authService.getWaiters()
+        .then(list => {
+          setWaiters(list);
+        })
+        .catch(err => {
+          console.error('Błąd podczas pobierania kelnerów:', err);
+        })
+        .finally(() => {
+          setLoadingWaiters(false);
+        });
+    }
+  }, [selectedTable, role]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadOpenOrder = async () => {
+      if (!selectedTable) {
+        setOpenOrder(null);
+        return;
+      }
+      try {
+        const resp = await orderService.getOpenOrderByTable(selectedTable.id);
+        if (!mounted) return;
+        setOpenOrder(resp?.data || resp || null);
+      } catch (err) {
+        console.error('Error loading open order for table modal:', err);
+        if (mounted) setOpenOrder(null);
+      }
+    };
+
+    loadOpenOrder();
+
+    return () => { mounted = false; };
+  }, [selectedTable]);
+
+  const handleAssignMe = () => {
+    if (!selectedTable || !currentUserEmail) return;
+    const updated = tables.map(t =>
+      t.id === selectedTable.id ? { ...t, waiter: currentUserEmail } : t
+    );
+    setTables(updated);
+    setSelectedTable({ ...selectedTable, waiter: currentUserEmail });
+    tableService.assignWaiter(selectedTable.id, currentUserEmail).catch(() => {
+      // Backend can reject waiter permission depending on role policy.
+    });
+  };
+
+  const handleUnassignMe = () => {
+    if (!selectedTable) return;
+    tableService.unassignWaiter(selectedTable.id)
+      .then(updatedTable => {
+        const nextTables = tables.map(t =>
+          t.id === updatedTable.id ? updatedTable : t
+        );
+        setTables(nextTables);
+        setSelectedTable(updatedTable);
+      })
+      .catch(err => {
+        console.error('Błąd podczas odpinania kelnera:', err);
+      });
+  };
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!selectedTable) return;
+    const newStatus = e.target.value as TableType['status'];
+    tableService.update(selectedTable.id, { ...selectedTable, status: newStatus })
+      .then(updatedTable => {
+        const nextTables = tables.map(t =>
+          t.id === updatedTable.id ? updatedTable : t
+        );
+        setTables(nextTables);
+        setSelectedTable(updatedTable);
+      })
+      .catch(err => {
+        console.error('Błąd podczas zmiany statusu stolika:', err);
+      });
+  };
 
   if (!selectedTable) return null;
 
   const tableReservations = reservations.filter(
     r => r.tableId === selectedTable.id && r.status === 'accepted'
   );
-
-  const handleAssignMe = () => {
-    const updated = tables.map(t =>
-      t.id === selectedTable.id ? { ...t, waiter: 'Jan K. (Ty)' } : t
-    );
-    setTables(updated);
-    setSelectedTable({ ...selectedTable, waiter: 'Jan K. (Ty)' });
-    tableService.assignWaiter(selectedTable.id, 'Jan K. (Ty)').catch(() => {
-      // Backend can reject waiter permission depending on role policy.
-    });
-  };
-
-  const handleUnassignMe = () => {
-    const updated = tables.map(t =>
-      t.id === selectedTable.id ? { ...t, waiter: null } : t
-    );
-    setTables(updated);
-    setSelectedTable({ ...selectedTable, waiter: null });
-    tableService.assignWaiter(selectedTable.id, null).catch(() => {
-      // Backend can reject waiter permission depending on role policy.
-    });
-  };
-
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newStatus = e.target.value as TableType['status'];
-    const updated = tables.map(t =>
-      t.id === selectedTable.id ? { ...t, status: newStatus } : t
-    );
-    setTables(updated);
-    setSelectedTable({ ...selectedTable, status: newStatus });
-    tableService.update(selectedTable.id, { ...selectedTable, status: newStatus }).catch(() => {
-      // Backend can reject waiter permission depending on role policy.
-    });
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -88,23 +147,58 @@ export function TableModal({ role }: TableModalProps) {
 
           <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
             <span className="text-gray-600">Obsługuje:</span>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800">{selectedTable.waiter || 'Brak'}</span>
-              {role === 'waiter' && !selectedTable.waiter && (
-                <button
-                  onClick={handleAssignMe}
-                  className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded hover:bg-orange-200 flex items-center gap-1"
+            <div className="flex items-center gap-2 flex-1 ml-3">
+              {role === 'admin' ? (
+                <select
+                  value={selectedTable.waiter || ''}
+                  onChange={(e) => {
+                    const newWaiter = e.target.value || null;
+                    const request = newWaiter
+                      ? tableService.assignWaiter(selectedTable.id, newWaiter)
+                      : tableService.unassignWaiter(selectedTable.id);
+
+                    request
+                      .then(updatedTable => {
+                        const nextTables = tables.map(t =>
+                          t.id === updatedTable.id ? updatedTable : t
+                        );
+                        setTables(nextTables);
+                        setSelectedTable(updatedTable);
+                      })
+                      .catch(err => {
+                        console.error('Błąd podczas przypisywania kelnera:', err);
+                      });
+                  }}
+                  className="flex-1 border rounded px-2 py-1 bg-white font-medium text-sm"
+                  disabled={loadingWaiters}
                 >
-                  Przypisz mnie
-                </button>
-              )}
-              {role === 'waiter' && selectedTable.waiter === 'Jan K. (Ty)' && (
-                <button
-                  onClick={handleUnassignMe}
-                  className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200 flex items-center gap-1"
-                >
-                  Odepnij mnie
-                </button>
+                  <option value="">-- Brak przypisania --</option>
+                  {waiters.map(waiter => (
+                    <option key={waiter._id} value={waiter.email}>
+                      {waiter.email}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <span className="font-bold text-gray-800 flex-1">{selectedTable.waiter || 'Brak'}</span>
+                  {role === 'waiter' && !selectedTable.waiter && (
+                    <button
+                      onClick={handleAssignMe}
+                      className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded hover:bg-orange-200"
+                    >
+                      Przypisz mnie
+                    </button>
+                  )}
+                  {role === 'waiter' && selectedTable.waiter && (
+                    <button
+                      onClick={handleUnassignMe}
+                      className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200"
+                    >
+                      Odepnij mnie
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -130,6 +224,30 @@ export function TableModal({ role }: TableModalProps) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+        <div className="mt-4">
+          <h4 className="font-bold text-gray-700 mb-2">Aktualne otwarte zamówienie</h4>
+          {!openOrder ? (
+            <p className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded">Brak otwartego zamówienia.</p>
+          ) : (
+            <div className="bg-white p-3 rounded border">
+              <div className="text-sm text-gray-700 mb-2">ID zamówienia: {openOrder._id || openOrder.id}</div>
+              <ul className="space-y-2">
+                {(openOrder.items || []).map((it: any, idx: number) => (
+                  <li key={it.menuItemId?._id || it.menuItemId || idx} className="flex justify-between">
+                    <div>
+                      <div className="font-medium">{it.menuItemId?.name || it.name || 'Pozycja'}</div>
+                      <div className="text-xs text-gray-500">{it.menuItemId?.description || ''}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold">x{it.quantity}</div>
+                      <div className="text-xs text-gray-600">{(it.menuItemId?.price || it.price || 0).toFixed(2)} zł</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

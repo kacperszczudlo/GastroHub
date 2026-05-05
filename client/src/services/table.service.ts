@@ -55,12 +55,34 @@ class TableService {
 
   // Admin: aktualizacja pozycji na mapie
   async updatePosition(id: string, x: number, y: number): Promise<Table> {
-    return this.update(id, await this.getById(id).then(t => ({ ...t, x, y })));
+    try {
+      const response = await apiService.getClient().put(`/tables/${id}/`, { x, y });
+      return TableModel.fromAPI(response.data.data || response.data);
+    } catch (error) {
+      console.error('Error updating position:', error);
+      throw error;
+    }
   }
 
   // Przypisanie kelnera do stolika
   async assignWaiter(id: string, waiter: string | null): Promise<Table> {
-    return this.update(id, await this.getById(id).then(t => ({ ...t, waiter })));
+    try {
+      const response = await apiService.getClient().post(`/tables/${id}/assign`, { waiter });
+      return TableModel.fromAPI(response.data.data || response.data);
+    } catch (error) {
+      console.error('Error assigning waiter to table:', error);
+      throw error;
+    }
+  }
+
+  async unassignWaiter(id: string): Promise<Table> {
+    try {
+      const response = await apiService.getClient().post(`/tables/${id}/unassign`);
+      return TableModel.fromAPI(response.data.data || response.data);
+    } catch (error) {
+      console.error('Error unassigning waiter from table:', error);
+      throw error;
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../constants';
 
 class ApiService {
   private api: AxiosInstance;
+  private authToken: string | null = null;
 
   constructor() {
     this.api = axios.create({
@@ -14,9 +15,8 @@ class ApiService {
 
     // Interceptor do dodawania tokenu, jeśli mamy autentykację
     this.api.interceptors.request.use((config) => {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      if (this.authToken) {
+        config.headers.Authorization = `Bearer ${this.authToken}`;
       }
       return config;
     });
@@ -26,8 +26,7 @@ class ApiService {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_role');
+          this.clearAuthToken();
           if (window.location.pathname !== '/') {
             window.location.href = '/';
           }
@@ -42,12 +41,12 @@ class ApiService {
   }
 
   setAuthToken(token: string) {
-    localStorage.setItem('auth_token', token);
+    this.authToken = token;
     this.api.defaults.headers.common.Authorization = `Bearer ${token}`;
   }
 
   clearAuthToken() {
-    localStorage.removeItem('auth_token');
+    this.authToken = null;
     delete this.api.defaults.headers.common.Authorization;
   }
 }

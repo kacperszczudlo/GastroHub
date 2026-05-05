@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Users } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Table } from '../../types';
-import { INITIAL_TABLES } from '../../constants';
 import tableService from '../../services/table.service';
+import orderService from '../../services/order.service';
 
 interface FloorPlanProps {
   editable?: boolean;
@@ -14,6 +14,8 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
   const [localTables, setLocalTables] = useState<Table[]>(tables);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState(editable);
+  const [error, setError] = useState('');
+  const [openOrders, setOpenOrders] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -24,25 +26,49 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
         if (mounted) {
           setTables(apiTables);
           setLocalTables(apiTables);
+          setError('');
         }
-      } catch {
-        if (mounted && tables.length === 0) {
-          setTables(INITIAL_TABLES);
-          setLocalTables(INITIAL_TABLES);
+      } catch (err) {
+        if (mounted) {
+          console.error('Błąd pobierania stolik:', err);
+          setError('❌ Nie udało się pobrać danych stolików. Sprawdź czy serwer API działa.');
+          setTables([]);
+          setLocalTables([]);
         }
       }
     };
 
-    if (tables.length === 0) {
-      fetchTables();
-    } else {
-      setLocalTables(tables);
-    }
+    // Zawsze pobierz z backendu żeby mieć najnowsze pozycje
+    fetchTables();
 
     return () => {
       mounted = false;
     };
-  }, [tables, setTables]);
+  }, [setTables]);
+
+  // Pobierz otwarte zamówienia co 5 sekund
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchOpenOrders = async () => {
+      try {
+        const orders = await orderService.getOpenOrders();
+        if (mounted) {
+          setOpenOrders(orders);
+        }
+      } catch (err) {
+        console.error('Błąd pobierania otwartych zamówień:', err);
+      }
+    };
+
+    fetchOpenOrders();
+    const interval = setInterval(fetchOpenOrders, 5000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {
     if (!dragMode) return;
@@ -74,9 +100,19 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
     if (editable) {
       const changed = updated.find(t => t.id === id);
       if (changed) {
-        tableService.updatePosition(id, changed.x, changed.y).catch(() => {
-          // Layout update is non-blocking in UI; backend sync can be retried on next drag.
-        });
+        tableService.updatePosition(id, changed.x, changed.y)
+          .then(() => {
+            console.log('✅ Pozycja zapisana w bazie');
+          })
+          .catch((err) => {
+            console.error('❌ Błąd zapisywania pozycji:', err);
+            // Pobierz świeże dane ze servera aby cofnąć zmianę
+            tableService.getAll()
+              .then(fresh => {
+                setLocalTables(fresh);
+                setTables(fresh);
+              });
+          });
       }
     }
 
@@ -103,6 +139,11 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
 
   return (
     <div className="p-6">
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-4">
           {dragMode ? 'Konfiguracja układu sali (Przeciągnij)' : 'Panel sali (Kliknij w stolik)'}
@@ -157,6 +198,11 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
             <span className="text-xs flex items-center gap-1">
               <Users className="h-3 w-3" /> {table.seats}
             </span>
+            {openOrders.some(o => o.tableId?._id === table.id || o.tableId === table.id) && (
+              <div className="absolute -bottom-2 -left-2 bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full shadow border border-white font-bold">
+                {openOrders.find(o => o.tableId?._id === table.id || o.tableId === table.id)?.items?.length || 0} pozycji
+              </div>
+            )}
             {table.waiter && (
               <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full shadow border border-white">
                 {table.waiter.split(' ')[0]}

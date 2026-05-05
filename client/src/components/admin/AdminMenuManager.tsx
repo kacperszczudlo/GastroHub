@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit3, Trash2, XCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MenuItem } from '../../types';
-import { MOCK_MEALS } from '../../constants';
 import menuService from '../../services/menu.service';
 
 export function AdminMenuManager() {
   const { menu, setMenu } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [selectedImage, setSelectedImage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -18,10 +19,12 @@ export function AdminMenuManager() {
         const items = await menuService.getAll();
         if (mounted) {
           setMenu(items);
+          setError('');
         }
-      } catch {
-        if (mounted && menu.length === 0) {
-          setMenu(MOCK_MEALS);
+      } catch (err) {
+        if (mounted) {
+          console.error('Błąd pobierania menu:', err);
+          setError('❌ Nie udało się pobrać menu. Sprawdź czy serwer API działa.');
         }
       }
     };
@@ -44,18 +47,38 @@ export function AdminMenuManager() {
 
   const handleOpenForm = (item: MenuItem | null = null) => {
     setEditingItem(item);
+    setSelectedImage(item?.image || '');
     setIsModalOpen(true);
   };
+
+  const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Nie udało się odczytać pliku'));
+    reader.readAsDataURL(file);
+  });
 
   const handleSaveForm = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const imageFile = formData.get('imageFile');
+
+    let imageValue = selectedImage;
+    if (imageFile instanceof File && imageFile.size > 0) {
+      imageValue = await fileToDataUrl(imageFile);
+    }
+
+    if (!imageValue && !editingItem) {
+      alert('Wybierz plik ze zdjęciem potrawy.');
+      return;
+    }
+
     const newItem: MenuItem = {
       id: editingItem?.id || Date.now().toString(),
       name: formData.get('name') as string,
       category: formData.get('category') as string,
       price: parseFloat(formData.get('price') as string),
-      image: (formData.get('image') as string) || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400',
+      image: imageValue || editingItem?.image || '',
       desc: (formData.get('desc') as string) || 'Brak opisu.'
     };
 
@@ -79,6 +102,7 @@ export function AdminMenuManager() {
     }
     setIsModalOpen(false);
     setEditingItem(null);
+    setSelectedImage('');
   };
 
   return (
@@ -92,6 +116,12 @@ export function AdminMenuManager() {
           <Plus className="h-5 w-5" /> Dodaj nowe danie
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       <div className="bg-white shadow-md rounded-xl overflow-x-auto border">
         <table className="min-w-full text-left border-collapse">
@@ -183,13 +213,24 @@ export function AdminMenuManager() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL Zdjęcia</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Zdjęcie dania</label>
                 <input
-                  name="image"
-                  defaultValue={editingItem?.image}
-                  className="w-full p-2 border rounded-lg"
-                  placeholder="https://..."
+                  name="imageFile"
+                  type="file"
+                  accept="image/*"
+                  className="w-full p-2 border rounded-lg bg-white"
+                  onChange={async (event) => {
+                    const file = event.currentTarget.files?.[0];
+                    if (file) {
+                      setSelectedImage(await fileToDataUrl(file));
+                    }
+                  }}
                 />
+                {selectedImage && (
+                  <div className="mt-2">
+                    <img src={selectedImage} alt="Podgląd" className="h-24 w-full rounded-lg object-cover border" />
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Opis</label>

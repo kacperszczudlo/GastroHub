@@ -17,7 +17,7 @@ export type ViewType =
 export type TableStatus = 'free' | 'occupied' | 'reserved';
 
 // Status rezerwacji
-export type ReservationStatus = 'pending' | 'accepted' | 'rejected';
+export type ReservationStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
 
 // Interfejs Menu Item
 export interface MenuItem {
@@ -38,6 +38,7 @@ export interface Table {
   x: number;
   y: number;
   waiter: string | null;
+  orderId?: string | null;
 }
 
 // Interfejs Rezerwacji
@@ -54,6 +55,7 @@ export interface Reservation {
 // Interfejs Grafiku Pracy
 export interface Schedule {
   id: string;
+  _id?: string;
   date: string;
   shift: string;
   waiter: string;
