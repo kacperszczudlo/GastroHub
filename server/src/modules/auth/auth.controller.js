@@ -20,3 +20,13 @@ export const loginUser = async(req, res) => {
         res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas logowania" });
     }
 }
+
+export const getWaiters = async(req, res) => {
+    try {
+        const result = await authService.getWaiters();
+        res.status(200).json(result);
+    }
+    catch (error) {
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas pobierania listy kelnerów" });
+    }
+}
