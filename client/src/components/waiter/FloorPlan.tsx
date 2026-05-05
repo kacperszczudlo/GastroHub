@@ -17,6 +17,7 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
   const [error, setError] = useState('');
   const [openOrders, setOpenOrders] = useState<any[]>([]);
 
+  // Fetch tables from backend on initial mount
   useEffect(() => {
     let mounted = true;
 
@@ -45,6 +46,11 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
       mounted = false;
     };
   }, [setTables]);
+
+  // Sync localTables with tables from context when they change
+  useEffect(() => {
+    setLocalTables(tables);
+  }, [tables]);
 
   // Pobierz otwarte zamówienia co 5 sekund
   useEffect(() => {
@@ -146,13 +152,17 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
       )}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-4">
-          {dragMode ? 'Konfiguracja układu sali (Przeciągnij)' : 'Panel sali (Kliknij w stolik)'}
+          {dragMode ? 'Edycja Układu - Przeciągnij Stoliki' : 'Zarządzanie Stolikami - Kliknij w Stolik'}
           {editable && (
             <button
               onClick={() => setDragMode(!dragMode)}
-              className="text-sm bg-purple-100 text-purple-700 px-4 py-1.5 rounded-lg hover:bg-purple-200 transition border border-purple-200"
+              className={`text-sm px-4 py-2 rounded-lg transition border font-semibold ${
+                dragMode
+                  ? 'bg-purple-500 text-white border-purple-600 hover:bg-purple-600'
+                  : 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600'
+              }`}
             >
-              {dragMode ? 'Przełącz na: Zarządzanie stolikami' : 'Przełącz na: Edycja układu (Drag&Drop)'}
+              {dragMode ? '↓ Przełącz na Zarządzanie' : '✏️ Przełącz na Edycję Układu'}
             </button>
           )}
         </h2>
@@ -170,6 +180,12 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
           </div>
         )}
       </div>
+
+      {dragMode && editable && (
+        <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+          <strong>Tryb edycji:</strong> Przeciągnij stolik, aby zmienić jego pozycję na planie sali. Zmiana zostanie automatycznie zapisana.
+        </div>
+      )}
 
       <div
         className="relative w-full h-[600px] bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden shadow-inner"

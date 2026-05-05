@@ -21,6 +21,7 @@ export function TableModal({ role }: TableModalProps) {
   const { email: currentUserEmail } = useAuth();
   const [waiters, setWaiters] = useState<Waiter[]>([]);
   const [loadingWaiters, setLoadingWaiters] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [openOrder, setOpenOrder] = useState<any | null>(null);
 
   useEffect(() => {
@@ -61,47 +62,57 @@ export function TableModal({ role }: TableModalProps) {
     return () => { mounted = false; };
   }, [selectedTable]);
 
-  const handleAssignMe = () => {
-    if (!selectedTable || !currentUserEmail) return;
-    const updated = tables.map(t =>
-      t.id === selectedTable.id ? { ...t, waiter: currentUserEmail } : t
-    );
-    setTables(updated);
-    setSelectedTable({ ...selectedTable, waiter: currentUserEmail });
-    tableService.assignWaiter(selectedTable.id, currentUserEmail).catch(() => {
-      // Backend can reject waiter permission depending on role policy.
-    });
+  const handleAssignMe = async () => {
+    if (!selectedTable || !currentUserEmail || processing) return;
+    setProcessing(true);
+    try {
+      const updatedTable = await tableService.assignWaiter(selectedTable.id, currentUserEmail);
+      const nextTables = tables.map(t => (t.id === updatedTable.id ? updatedTable : t));
+      setTables(nextTables);
+      setSelectedTable(updatedTable);
+    } catch (err) {
+      console.error('Błąd podczas przypisywania się do stolika:', err);
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleUnassignMe = () => {
-    if (!selectedTable) return;
-    tableService.unassignWaiter(selectedTable.id)
-      .then(updatedTable => {
-        const nextTables = tables.map(t =>
-          t.id === updatedTable.id ? updatedTable : t
-        );
-        setTables(nextTables);
-        setSelectedTable(updatedTable);
-      })
-      .catch(err => {
-        console.error('Błąd podczas odpinania kelnera:', err);
-      });
+  const handleUnassignMe = async () => {
+    if (!selectedTable || processing) return;
+    setProcessing(true);
+    try {
+      const updatedTable = await tableService.unassignWaiter(selectedTable.id);
+      const nextTables = tables.map(t => (t.id === updatedTable.id ? updatedTable : t));
+      setTables(nextTables);
+      setSelectedTable(updatedTable);
+    } catch (err) {
+      console.error('Błąd podczas odpinania kelnera:', err);
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (!selectedTable) return;
+  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!selectedTable || processing) return;
     const newStatus = e.target.value as TableType['status'];
-    tableService.update(selectedTable.id, { ...selectedTable, status: newStatus })
-      .then(updatedTable => {
-        const nextTables = tables.map(t =>
-          t.id === updatedTable.id ? updatedTable : t
-        );
-        setTables(nextTables);
-        setSelectedTable(updatedTable);
-      })
-      .catch(err => {
-        console.error('Błąd podczas zmiany statusu stolika:', err);
-      });
+    setProcessing(true);
+    try {
+      const payload: TableType = { ...selectedTable, status: newStatus } as TableType;
+      const updatedTable = await tableService.update(selectedTable.id, payload);
+      const nextTables = tables.map(t =>
+        t.id === updatedTable.id ? updatedTable : t
+      );
+      setTables(nextTables);
+      setSelectedTable(updatedTable);
+      console.log('[Status Change] Success:', newStatus);
+    } catch (err) {
+      console.error('Błąd podczas zmiany statusu stolika:', err);
+      // Revert the UI change
+      const currentSelect = (e.target as HTMLSelectElement);
+      currentSelect.value = selectedTable.status;
+    } finally {
+      setProcessing(false);
+    }
   };
 
   if (!selectedTable) return null;
@@ -137,7 +148,8 @@ export function TableModal({ role }: TableModalProps) {
             <select
               value={selectedTable.status}
               onChange={handleStatusChange}
-              className="border rounded px-2 py-1 bg-gray-50 font-medium"
+              disabled={processing}
+              className={`border rounded px-2 py-1 bg-gray-50 font-medium ${processing ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <option value="free">🟢 Wolny</option>
               <option value="occupied">🔴 Zajęty</option>
@@ -149,28 +161,34 @@ export function TableModal({ role }: TableModalProps) {
             <span className="text-gray-600">Obsługuje:</span>
             <div className="flex items-center gap-2 flex-1 ml-3">
               {role === 'admin' ? (
-                <select
+                  <select
                   value={selectedTable.waiter || ''}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const newWaiter = e.target.value || null;
-                    const request = newWaiter
-                      ? tableService.assignWaiter(selectedTable.id, newWaiter)
-                      : tableService.unassignWaiter(selectedTable.id);
-
-                    request
-                      .then(updatedTable => {
-                        const nextTables = tables.map(t =>
-                          t.id === updatedTable.id ? updatedTable : t
-                        );
-                        setTables(nextTables);
-                        setSelectedTable(updatedTable);
-                      })
-                      .catch(err => {
-                        console.error('Błąd podczas przypisywania kelnera:', err);
-                      });
+                    console.log('[Admin] Waiter assignment change:', {
+                      tableId: selectedTable.id,
+                      currentWaiter: selectedTable.waiter,
+                      newWaiter,
+                      eventValue: e.target.value
+                    });
+                    if (processing) return;
+                    setProcessing(true);
+                    try {
+                      const updatedTable = newWaiter
+                        ? await tableService.assignWaiter(selectedTable.id, newWaiter)
+                        : await tableService.unassignWaiter(selectedTable.id);
+                      console.log('[Admin] Waiter assignment success:', updatedTable);
+                      const nextTables = tables.map(t => (t.id === updatedTable.id ? updatedTable : t));
+                      setTables(nextTables);
+                      setSelectedTable(updatedTable);
+                    } catch (err) {
+                      console.error('[Admin] Błąd podczas przypisywania kelnera:', err);
+                    } finally {
+                      setProcessing(false);
+                    }
                   }}
                   className="flex-1 border rounded px-2 py-1 bg-white font-medium text-sm"
-                  disabled={loadingWaiters}
+                  disabled={loadingWaiters || processing}
                 >
                   <option value="">-- Brak przypisania --</option>
                   {waiters.map(waiter => (
@@ -182,22 +200,32 @@ export function TableModal({ role }: TableModalProps) {
               ) : (
                 <>
                   <span className="font-bold text-gray-800 flex-1">{selectedTable.waiter || 'Brak'}</span>
-                  {role === 'waiter' && !selectedTable.waiter && (
-                    <button
+                    {role === 'waiter' && !selectedTable.waiter && (
+                      <button
                       onClick={handleAssignMe}
-                      className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded hover:bg-orange-200"
+                      disabled={processing}
+                      className={`text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded hover:bg-orange-200 ${processing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       Przypisz mnie
-                    </button>
-                  )}
-                  {role === 'waiter' && selectedTable.waiter && (
-                    <button
-                      onClick={handleUnassignMe}
-                      className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200"
+                      </button>
+                   )}
+
+                   {role === 'waiter' && selectedTable.waiter === currentUserEmail && (
+                     <button
+                      onClick={() => {
+                        // guard: only allow API call when current user is actually assigned
+                        if (selectedTable.waiter !== currentUserEmail || processing) {
+                          console.warn('Próba odpięcia: aktualny użytkownik nie jest przypisany do tego stolika lub operacja w toku');
+                          return;
+                        }
+                        handleUnassignMe();
+                      }}
+                      disabled={processing}
+                      className={`text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200 ${processing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       Odepnij mnie
-                    </button>
-                  )}
+                     </button>
+                   )}
                 </>
               )}
             </div>

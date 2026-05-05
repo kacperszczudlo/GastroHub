@@ -36,7 +36,7 @@ export function AdminReservationsManager() {
       const tables = await tableService.getAll();
       setTables(tables);
     } catch {
-      alert('Nie udało się zaakceptować rezerwacji w backendzie.');
+      alert('Nie udało się zaakceptować rezerwacji.');
     }
   };
 
@@ -52,7 +52,7 @@ export function AdminReservationsManager() {
       const tables = await tableService.getAll();
       setTables(tables);
     } catch {
-      alert('Nie udało się anulować rezerwacji w backendzie.');
+      alert('Nie udało się anulować rezerwacji.');
     }
   };
 
@@ -80,9 +80,9 @@ export function AdminReservationsManager() {
                 await reservationService.prune(90);
                 const items = await reservationService.getAll();
                 setReservations(items);
-                alert('Prune zakończony');
+                alert('Stare rezerwacje zostały usunięte.');
               } catch (err) {
-                alert('Nie udało się wykonać prune rezerwacji');
+                alert('Nie udało się usunąć starych rezerwacji.');
               }
             }}
             className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded"

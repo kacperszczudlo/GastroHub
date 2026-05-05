@@ -91,9 +91,6 @@ function MenuItemCard({ item }: MenuItemCardProps) {
           alt={item.name}
           className="w-full h-full object-cover rounded-xl"
         />
-        <span className="absolute top-4 left-4 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-          ★ Popularne
-        </span>
       </div>
       <div className="p-6">
         <h3 className="text-xl font-black text-gray-900 uppercase">{item.name}</h3>

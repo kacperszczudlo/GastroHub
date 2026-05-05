@@ -68,7 +68,9 @@ class TableService {
   async assignWaiter(id: string, waiter: string | null): Promise<Table> {
     try {
       const response = await apiService.getClient().post(`/tables/${id}/assign`, { waiter });
-      return TableModel.fromAPI(response.data.data || response.data);
+        const tableData = response.data.data || response.data;
+        console.log('[Table Service] assignWaiter response:', tableData);
+        return TableModel.fromAPI(tableData);
     } catch (error) {
       console.error('Error assigning waiter to table:', error);
       throw error;
@@ -78,7 +80,9 @@ class TableService {
   async unassignWaiter(id: string): Promise<Table> {
     try {
       const response = await apiService.getClient().post(`/tables/${id}/unassign`);
-      return TableModel.fromAPI(response.data.data || response.data);
+        const tableData = response.data.data || response.data;
+        console.log('[Table Service] unassignWaiter response:', tableData);
+        return TableModel.fromAPI(tableData);
     } catch (error) {
       console.error('Error unassigning waiter from table:', error);
       throw error;

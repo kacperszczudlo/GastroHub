@@ -162,7 +162,6 @@ export function WaiterPOS() {
       const created = await orderService.createOpenOrder(payload);
       console.log('Zamówienie utworzone:', created);
       setError('');
-      alert('Rachunek zapisano jako otwarty i przypisano do stolika.');
       await refreshTables();
     } catch (err: any) {
       console.error('Błąd podczas zapisywania zamówienia:', err);
@@ -192,7 +191,6 @@ export function WaiterPOS() {
         setSelectedTable(updatedTable);
       }
       setError('');
-      alert(`Zrealizowano płatność na kwotę: ${total.toFixed(2)} zł. Stolik został zwolniony.`);
       await refreshTables();
     } catch (err: any) {
       console.error('Błąd podczas finalizacji płatności:', err);
