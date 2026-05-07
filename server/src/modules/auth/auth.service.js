@@ -2,6 +2,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "./user.model.js";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/;
+
 const DEMO_PASSWORD = "GastroHub123!";
 const DEMO_USERS = [
 	{ email: "demo.client@gastrohub.local", role: "client" },
@@ -15,25 +19,44 @@ const createError = (status, message) => {
 	return error;
 };
 
+const normalizeEmail = (email) => email.trim().toLowerCase();
+
+const validateRegistrationData = (email, password) => {
+	if (!EMAIL_REGEX.test(email)) {
+		throw createError(400, "Podaj poprawny adres email");
+	}
+
+	if (password.length < PASSWORD_MIN_LENGTH || !PASSWORD_POLICY_REGEX.test(password)) {
+		throw createError(
+			400,
+			"Hasło musi mieć min. 8 znaków oraz zawierać małą i dużą literę, cyfrę i znak specjalny"
+		);
+	}
+};
+
 export const registerUser = async ({ email, password, role }) => {
 	if (!email || !password) {
 		throw createError(400, "Email i hasło są wymagane");
 	}
 
+	const normalizedEmail = normalizeEmail(email);
+	const normalizedPassword = password.trim();
+	validateRegistrationData(normalizedEmail, normalizedPassword);
+
 	if (role && role !== "client") {
 		throw createError(403, "Rejestracja dostępna jest tylko dla klienta");
 	}
 
-	const existingUser = await User.findOne({ email });
+	const existingUser = await User.findOne({ email: normalizedEmail });
 	if (existingUser) {
 		throw createError(400, "Użytkownik już istnieje");
 	}
 
 	const salt = await bcrypt.genSalt(10);
-	const hashedPassword = await bcrypt.hash(password, salt);
+	const hashedPassword = await bcrypt.hash(normalizedPassword, salt);
 
 	const newUser = new User({
-		email,
+		email: normalizedEmail,
 		password: hashedPassword,
 		role: role || "client"
 	});
@@ -65,7 +88,8 @@ export const loginUser = async ({ email, password }) => {
 		throw createError(400, "Email i hasło są wymagane");
 	}
 
-	const user = await User.findOne({ email });
+	const normalizedEmail = normalizeEmail(email);
+	const user = await User.findOne({ email: normalizedEmail });
 	if (!user) {
 		throw createError(400, "Nieprawidłowy email lub hasło");
 	}

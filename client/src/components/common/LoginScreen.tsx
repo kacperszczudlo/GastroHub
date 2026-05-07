@@ -3,6 +3,9 @@ import { Utensils } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/;
+
 export function LoginScreen() {
   const { login, register } = useAuth();
   const { setCurrentView } = useApp();
@@ -15,10 +18,24 @@ export function LoginScreen() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMsg('');
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (mode === 'register') {
+      if (!EMAIL_REGEX.test(normalizedEmail)) {
+        setErrorMsg('Podaj poprawny adres email.');
+        return;
+      }
+
+      if (password.length < 8 || !PASSWORD_POLICY_REGEX.test(password)) {
+        setErrorMsg('Hasło musi mieć min. 8 znaków oraz zawierać małą i dużą literę, cyfrę i znak specjalny.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      const role = mode === 'register' ? await register(email, password) : await login(email, password);
+      const role = mode === 'register' ? await register(normalizedEmail, password) : await login(normalizedEmail, password);
 
       if (role === 'admin') {
         setCurrentView('admin_dashboard');
@@ -65,6 +82,7 @@ export function LoginScreen() {
               onChange={(e) => setPassword(e.target.value)}
               type="password"
               required
+              minLength={8}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
             />
           </div>
