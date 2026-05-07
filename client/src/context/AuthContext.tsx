@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { UserRole } from '../types';
 import authService from '../services/auth.service';
 import apiService from '../services/api.service';
@@ -10,6 +10,8 @@ interface AuthContextType {
   register: (email: string, password: string) => Promise<UserRole>;
   logout: () => void;
 }
+
+const AUTH_TOKEN_STORAGE_KEY = 'gastrohub_auth_token';
 
 const decodeJwtPayload = (token: string): { role?: UserRole; email?: string } => {
   const payload = token.split('.')[1];
@@ -33,7 +35,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>(null);
   const [email, setEmail] = useState<string | null>(null);
 
+  useEffect(() => {
+    const storedToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    if (storedToken) {
+      apiService.setAuthToken(storedToken);
+      const payload = decodeJwtPayload(storedToken);
+      setRole((payload.role as UserRole) || null);
+      setEmail(payload.email || null);
+    }
+  }, []);
+
   const applySession = (token: string) => {
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
     apiService.setAuthToken(token);
     const payload = decodeJwtPayload(token);
     setRole((payload.role as UserRole) || null);
@@ -55,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setRole(null);
     setEmail(null);
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
     apiService.clearAuthToken();
   };
 
