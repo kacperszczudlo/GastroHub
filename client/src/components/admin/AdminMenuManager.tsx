@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit3, Trash2, XCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useUiFeedback } from '../../context/UiFeedbackContext';
 import { MenuItem } from '../../types';
 import menuService from '../../services/menu.service';
 
 export function AdminMenuManager() {
   const { menu, setMenu } = useApp();
+  const { showSuccess, showError } = useUiFeedback();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [selectedImage, setSelectedImage] = useState('');
@@ -40,8 +42,9 @@ export function AdminMenuManager() {
     try {
       await menuService.delete(id);
       setMenu(menu.filter(m => m.id !== id));
+      showSuccess('Pozycja menu została usunięta.');
     } catch {
-      alert('Nie udało się usunąć pozycji menu.');
+      showError('Nie udało się usunąć pozycji menu.');
     }
   };
 
@@ -69,7 +72,7 @@ export function AdminMenuManager() {
     }
 
     if (!imageValue && !editingItem) {
-      alert('Wybierz plik ze zdjęciem potrawy.');
+      showError('Wybierz plik ze zdjęciem potrawy.');
       return;
     }
 
@@ -97,9 +100,10 @@ export function AdminMenuManager() {
         setMenu([...menu, created]);
       }
     } catch {
-      alert('Nie udało się zapisać zmian w menu.');
+      showError('Nie udało się zapisać zmian w menu.');
       return;
     }
+    showSuccess(editingItem ? 'Danie zostało zaktualizowane.' : 'Danie zostało dodane.');
     setIsModalOpen(false);
     setEditingItem(null);
     setSelectedImage('');

@@ -33,6 +33,26 @@ export const updateReservationStatus = async(req, res) => {
     }
 }
 
+export const checkInReservation = async(req, res) => {
+    try {
+        const result = await reservationService.checkInReservation(req.params.id, req.user);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error("Błąd podczas check-in rezerwacji:", error);
+        res.status(error.status || 500).json({ error: "Błąd serwera", details: error.message });
+    }
+}
+
+export const completeReservation = async(req, res) => {
+    try {
+        const result = await reservationService.completeReservation(req.params.id, req.user);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error("Błąd podczas kończenia rezerwacji:", error);
+        res.status(error.status || 500).json({ error: "Błąd serwera", details: error.message });
+    }
+}
+
 export const cancelReservation = async(req, res) => {
     try{
         const result = await reservationService.cancelReservation(req.params.id);

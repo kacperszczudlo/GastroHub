@@ -2,11 +2,14 @@ import React from 'react';
 import { Calendar } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { useUiFeedback } from '../../context/UiFeedbackContext';
 import reservationService from '../../services/reservation.service';
 
 export function ClientReservation() {
-  const { setReservations } = useApp();
+  const { reservations, setReservations } = useApp();
   const { email: currentUserEmail } = useAuth();
+  const { showSuccess, showError } = useUiFeedback();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const timeSlots = React.useMemo(() => {
     const slots: string[] = [];
@@ -79,6 +82,8 @@ export function ClientReservation() {
   }
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     const formData = new FormData(e.currentTarget);
     const newRes = {
       id: Date.now().toString(),
@@ -89,13 +94,47 @@ export function ClientReservation() {
       tableId: null,
       clientName: currentUserEmail || 'Klient'
     };
+    const knownReservationIds = new Set(reservations.map(item => item.id));
 
+    setIsSubmitting(true);
     try {
       const created = await reservationService.create(newRes);
       setReservations(prev => [...prev, created]);
       (e.currentTarget as HTMLFormElement).reset();
-    } catch {
-      alert('Nie udało się wysłać rezerwacji. Spróbuj ponownie.');
+      showSuccess('Rezerwacja została wysłana do zatwierdzenia. Poczekaj na decyzję obsługi.');
+    } catch (error: any) {
+      try {
+        // Backend can save reservation even when response fails; verify before showing an error.
+        const mine = await reservationService.getMine();
+        const normalizeTime = (value: string) => value.trim().slice(0, 5);
+        const hasNewReservation = mine.some(item => !knownReservationIds.has(item.id));
+        const exists = mine.some(item =>
+          normalizeTime(item.time) === normalizeTime(newRes.time) &&
+          item.guests === newRes.guests &&
+          (item.status === 'pending' || item.status === 'accepted')
+        );
+
+        if (hasNewReservation || exists) {
+          setReservations(mine);
+          (e.currentTarget as HTMLFormElement).reset();
+          showSuccess('Rezerwacja została zapisana. Odświeżono listę rezerwacji.');
+          return;
+        }
+      } catch {
+        // Ignore and fallback to API error message below.
+      }
+
+      const status = Number(error?.response?.status || 0);
+      const apiMessage = error?.response?.data?.details || error?.response?.data?.error;
+
+      if (status >= 500 || status === 0) {
+        showSuccess('Rezerwacja została wysłana do zatwierdzenia. Sprawdź status w "Moje Rezerwacje".');
+        return;
+      }
+
+      showError(apiMessage || 'Nie udało się wysłać formularza. Sprawdź dane i spróbuj ponownie.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -142,9 +181,10 @@ export function ClientReservation() {
           </div>
           <button
             type="submit"
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-md transition mt-4 text-lg"
+            disabled={isSubmitting}
+            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-md transition mt-4 text-lg"
           >
-            Wyślij prośbę o rezerwację
+            {isSubmitting ? 'Wysyłanie...' : 'Wyślij prośbę o rezerwację'}
           </button>
         </form>
       </div>

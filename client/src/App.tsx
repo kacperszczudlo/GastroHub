@@ -1,6 +1,7 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
+import { UiFeedbackProvider } from './context/UiFeedbackContext';
 import { Header, LoginScreen } from './components/common';
 import { ClientMenu, ClientReservation, ClientReservationsList } from './components/client';
 import { WaiterPOS, FloorPlan, TableModal } from './components/waiter';
@@ -45,9 +46,11 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
+      <UiFeedbackProvider>
+        <AppProvider>
+          <AppContent />
+        </AppProvider>
+      </UiFeedbackProvider>
     </AuthProvider>
   );
 }

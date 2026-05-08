@@ -147,20 +147,18 @@ export function WaiterPOS() {
     }
 
     try {
+      const items = orderService.mapToPayload(order);
+      const waiter = localSelectedTable?.waiter || null;
       const existingOrder = await orderService.getOpenOrderByTable(selectedTableId);
-      if (existingOrder) {
-        setError('To stolik ma już otwarte zamówienie. Użyj istniejącego rachunku albo zakończ płatność.');
-        return;
-      }
 
-      const payload = {
-        tableId: selectedTableId,
-        waiter: localSelectedTable?.waiter || null,
-        items: orderService.mapToPayload(order)
-      };
-      console.log('Wysyłanie zamówienia:', payload);
-      const created = await orderService.createOpenOrder(payload);
-      console.log('Zamówienie utworzone:', created);
+      if (existingOrder) {
+        const existingId = existingOrder._id || existingOrder.id;
+        console.log('Aktualizuję istniejące zamówienie:', existingId);
+        await orderService.updateOrderItems(existingId, { items, waiter });
+      } else {
+        console.log('Tworzę nowe zamówienie dla stolika:', selectedTableId);
+        await orderService.createOpenOrder({ tableId: selectedTableId, waiter, items });
+      }
       setError('');
       await refreshTables();
     } catch (err: any) {

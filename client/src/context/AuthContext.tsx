@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { UserRole } from '../types';
 import authService from '../services/auth.service';
 import apiService from '../services/api.service';
@@ -8,8 +8,11 @@ interface AuthContextType {
   email: string | null;
   login: (email: string, password: string) => Promise<UserRole>;
   register: (email: string, password: string) => Promise<UserRole>;
+  changePassword: (email: string, oldPassword: string, newPassword: string) => Promise<void>;
   logout: () => void;
 }
+
+const AUTH_TOKEN_STORAGE_KEY = 'gastrohub_auth_token';
 
 const decodeJwtPayload = (token: string): { role?: UserRole; email?: string } => {
   const payload = token.split('.')[1];
@@ -33,7 +36,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>(null);
   const [email, setEmail] = useState<string | null>(null);
 
+  useEffect(() => {
+    const storedToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    if (storedToken) {
+      apiService.setAuthToken(storedToken);
+      const payload = decodeJwtPayload(storedToken);
+      setRole((payload.role as UserRole) || null);
+      setEmail(payload.email || null);
+    }
+  }, []);
+
   const applySession = (token: string) => {
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
     apiService.setAuthToken(token);
     const payload = decodeJwtPayload(token);
     setRole((payload.role as UserRole) || null);
@@ -52,14 +66,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return applySession(token);
   };
 
+  const changePassword = async (email: string, oldPassword: string, newPassword: string) => {
+    await authService.changePassword(email, oldPassword, newPassword);
+  };
+
   const logout = () => {
     setRole(null);
     setEmail(null);
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
     apiService.clearAuthToken();
   };
 
   return (
-    <AuthContext.Provider value={{ role, email, login, register, logout }}>
+    <AuthContext.Provider value={{ role, email, login, register, changePassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
 import { Clock, Check, X, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useUiFeedback } from '../../context/UiFeedbackContext';
 import reservationService from '../../services/reservation.service';
 import tableService from '../../services/table.service';
 
 export function AdminReservationsManager() {
   const { reservations, setReservations, tables, setTables } = useApp();
+  const { showSuccess, showError, confirm } = useUiFeedback();
 
   useEffect(() => {
     let mounted = true;
@@ -36,7 +38,7 @@ export function AdminReservationsManager() {
       const tables = await tableService.getAll();
       setTables(tables);
     } catch {
-      alert('Nie udało się zaakceptować rezerwacji.');
+      showError('Nie udało się zaakceptować rezerwacji.');
     }
   };
 
@@ -52,17 +54,22 @@ export function AdminReservationsManager() {
       const tables = await tableService.getAll();
       setTables(tables);
     } catch {
-      alert('Nie udało się anulować rezerwacji.');
+      showError('Nie udało się anulować rezerwacji.');
     }
   };
 
   const handleHardDelete = async (id: string) => {
-    if (!confirm('Na pewno chcesz trwale usunąć tę rezerwację? To działanie jest nieodwracalne.')) return;
+    const shouldDelete = await confirm(
+      'Usunąć rezerwację?',
+      'Na pewno chcesz trwale usunąć tę rezerwację? To działanie jest nieodwracalne.'
+    );
+    if (!shouldDelete) return;
     try {
       await reservationService.hardDelete(id);
       setReservations(prev => prev.filter(r => r.id !== id));
+      showSuccess('Rezerwacja została trwale usunięta.');
     } catch {
-      alert('Nie udało się trwale usunąć rezerwacji.');
+      showError('Nie udało się trwale usunąć rezerwacji.');
     }
   };
 
@@ -75,14 +82,18 @@ export function AdminReservationsManager() {
         <div className="flex gap-2">
           <button
             onClick={async () => {
-              if (!confirm('Usuń wszystkie anulowane rezerwacje starsze niż 90 dni?')) return;
+              const shouldPrune = await confirm(
+                'Usunąć stare rezerwacje?',
+                'Usunąć wszystkie anulowane rezerwacje starsze niż 90 dni?'
+              );
+              if (!shouldPrune) return;
               try {
                 await reservationService.prune(90);
                 const items = await reservationService.getAll();
                 setReservations(items);
-                alert('Stare rezerwacje zostały usunięte.');
-              } catch (err) {
-                alert('Nie udało się usunąć starych rezerwacji.');
+                showSuccess('Stare rezerwacje zostały usunięte.');
+              } catch {
+                showError('Nie udało się usunąć starych rezerwacji.');
               }
             }}
             className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded"
@@ -123,6 +134,14 @@ export function AdminReservationsManager() {
                   ) : res.status === 'accepted' ? (
                     <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-bold">
                       Zatwierdzona
+                    </span>
+                  ) : res.status === 'active' ? (
+                    <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-bold">
+                      Klient na miejscu
+                    </span>
+                  ) : res.status === 'completed' ? (
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">
+                      Zrealizowana
                     </span>
                   ) : res.status === 'cancelled' ? (
                     <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-bold">

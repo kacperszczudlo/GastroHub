@@ -34,7 +34,23 @@ class ReservationService {
       const response = await apiService
         .getClient()
         .post('/reservations', ReservationModel.toAPI(reservation as Reservation));
-      return ReservationModel.fromAPI(response.data.data || response.data);
+      const rawReservation = response.data?.data || response.data;
+
+      try {
+        return ReservationModel.fromAPI(rawReservation);
+      } catch (mappingError) {
+        // Reservation is already persisted on backend - fallback prevents false "send failed" UI.
+        console.warn('Reservation created but response mapping failed:', mappingError);
+        return {
+          id: (rawReservation?.id || rawReservation?._id || `temp-${Date.now()}`).toString(),
+          date: reservation.date,
+          time: reservation.time,
+          guests: reservation.guests,
+          status: 'pending',
+          tableId: null,
+          clientName: reservation.clientName
+        };
+      }
     } catch (error) {
       console.error('Error creating reservation:', error);
       throw error;
@@ -74,6 +90,29 @@ class ReservationService {
       return ReservationModel.fromAPI(response.data.data || response.data);
     } catch (error) {
       console.error('Error updating reservation:', error);
+      throw error;
+    }
+  }
+
+  // Mark an accepted reservation as "klient przybył" (active).
+  async checkIn(id: string): Promise<Reservation> {
+    try {
+      const response = await apiService.getClient().post(`/reservations/${id}/check-in`);
+      return ReservationModel.fromAPI(response.data.data || response.data);
+    } catch (error) {
+      console.error('Error checking in reservation:', error);
+      throw error;
+    }
+  }
+
+  // Manually finish an "active" reservation - frees the table without
+  // requiring a paid order (e.g. customer left without ordering).
+  async complete(id: string): Promise<Reservation> {
+    try {
+      const response = await apiService.getClient().post(`/reservations/${id}/complete`);
+      return ReservationModel.fromAPI(response.data.data || response.data);
+    } catch (error) {
+      console.error('Error completing reservation:', error);
       throw error;
     }
   }

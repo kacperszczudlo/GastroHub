@@ -1,4 +1,11 @@
 import Table from "./table.model.js";
+import Order from "../order/order.model.js";
+import Reservation from "../reservation/reservation.model.js";
+import {
+	RESERVATION_HOLD_MINUTES,
+	buildReservationStart,
+	buildReservationEnd
+} from "../reservation/reservation.service.js";
 
 const createError = (status, message) => {
 	const error = new Error(message);
@@ -6,8 +13,72 @@ const createError = (status, message) => {
 	return error;
 };
 
+// Compute the effective status for a given table, given the open orders and
+// upcoming/active reservations that touch it. Order of precedence:
+//   1. open order on this table   -> "occupied"
+//   2. active reservation         -> "occupied"
+//   3. accepted reservation that
+//      starts within HOLD window  -> "reserved"
+//   4. otherwise                  -> "available"
+const computeEffectiveStatus = (table, { openOrders, reservations }, now = new Date()) => {
+	const tableId = table._id.toString();
+
+	const hasOpenOrder = openOrders.some(o => {
+		const oid = (o.tableId?._id || o.tableId);
+		return oid && oid.toString() === tableId;
+	});
+	if (hasOpenOrder) return "occupied";
+
+	const tableReservations = reservations.filter(r => {
+		const rid = (r.tableId?._id || r.tableId);
+		return rid && rid.toString() === tableId;
+	});
+
+	const hasActive = tableReservations.some(r => r.status === "active");
+	if (hasActive) return "occupied";
+
+	const holdMs = RESERVATION_HOLD_MINUTES * 60 * 1000;
+	const isUpcomingSoon = tableReservations.some(r => {
+		if (r.status !== "accepted") return false;
+		const start = buildReservationStart(r.reservationDate, r.startTime);
+		const end = buildReservationEnd(r.reservationDate, r.endTime);
+		if (!start) return false;
+		const diff = start.getTime() - now.getTime();
+		// Reserved if start is within the hold window (in the future) OR
+		// the slot already started but hasn't been checked in yet (no-show grace).
+		const inHoldWindow = diff <= holdMs && diff >= 0;
+		const inProgress = end ? (start.getTime() <= now.getTime() && now.getTime() <= end.getTime()) : false;
+		return inHoldWindow || inProgress;
+	});
+	if (isUpcomingSoon) return "reserved";
+
+	return "available";
+};
+
+const decorateTablesWithStatus = async (tableDocs) => {
+	if (!tableDocs.length) return [];
+
+	const tableIds = tableDocs.map(t => t._id);
+
+	const [openOrders, reservations] = await Promise.all([
+		Order.find({ status: "open", tableId: { $in: tableIds } }).select("tableId"),
+		Reservation.find({
+			tableId: { $in: tableIds },
+			status: { $in: ["accepted", "active"] }
+		}).select("tableId status reservationDate startTime endTime")
+	]);
+
+	const now = new Date();
+	return tableDocs.map(doc => {
+		const plain = doc.toObject ? doc.toObject() : { ...doc };
+		const effective = computeEffectiveStatus(doc, { openOrders, reservations }, now);
+		return { ...plain, status: effective };
+	});
+};
+
 export const getAllTables = async () => {
-	const tables = await Table.find();
+	const tableDocs = await Table.find();
+	const tables = await decorateTablesWithStatus(tableDocs);
 	return { tables };
 };
 
@@ -27,26 +98,32 @@ export const createTable = async ({ tableNumber, capacity }) => {
 };
 
 export const updateTable = async (id, payload, user = null) => {
-	// If caller is waiter, restrict which fields they can change
+	// Effective table status is now derived from open orders / reservations,
+	// so we ignore any client-provided "status" change here. Keep position and
+	// admin-only fields editable.
+	const sanitized = { ...payload };
+	delete sanitized.status;
+	delete sanitized.orderId;
+
 	if (user && user.role === 'waiter') {
 		const allowed = {};
-		if (payload.status) allowed.status = payload.status;
-		if (typeof payload.x !== 'undefined') allowed.x = payload.x;
-		if (typeof payload.y !== 'undefined') allowed.y = payload.y;
-		// prevent waiter changing waiter assignment or orderId or number/capacity
+		if (typeof sanitized.x !== 'undefined') allowed.x = sanitized.x;
+		if (typeof sanitized.y !== 'undefined') allowed.y = sanitized.y;
 		const updatedTable = await Table.findByIdAndUpdate(id, allowed, { new: true });
 		if (!updatedTable) {
 			throw createError(404, "Stolik nie znaleziona");
 		}
-		return { message: "Stolik został zaktualizowany", data: updatedTable };
+		const [decorated] = await decorateTablesWithStatus([updatedTable]);
+		return { message: "Stolik został zaktualizowany", data: decorated };
 	}
 
-	const updatedTable = await Table.findByIdAndUpdate(id, payload, { new: true });
+	const updatedTable = await Table.findByIdAndUpdate(id, sanitized, { new: true });
 	if (!updatedTable) {
 		throw createError(404, "Stolik nie znaleziona");
 	}
 
-	return { message: "Stolik został zaktualizowany", data: updatedTable };
+	const [decorated] = await decorateTablesWithStatus([updatedTable]);
+	return { message: "Stolik został zaktualizowany", data: decorated };
 };
 
 // allow role-aware assignment of waiter to a table
@@ -65,7 +142,8 @@ export const assignWaiter = async (id, waiter, user) => {
 		throw createError(404, 'Stolik nie został znaleziony');
 	}
 
-	return { message: 'Przypisanie kelnera zaktualizowane', data: updated };
+	const [decorated] = await decorateTablesWithStatus([updated]);
+	return { message: 'Przypisanie kelnera zaktualizowane', data: decorated };
 };
 
 export const unassignWaiter = async (id, user) => {
@@ -79,7 +157,8 @@ export const unassignWaiter = async (id, user) => {
 	}
 
 	const updated = await Table.findByIdAndUpdate(id, { waiter: null }, { new: true });
-	return { message: 'Kelner został odpięty od stolika', data: updated };
+	const [decorated] = await decorateTablesWithStatus([updated]);
+	return { message: 'Kelner został odpięty od stolika', data: decorated };
 };
 
 export const deleteTable = async (id) => {
@@ -96,5 +175,6 @@ export const getTableById = async (id) => {
 	if (!table) {
 		throw createError(404, "Stolik nie znaleziona");
 	}
-	return { data: table };
+	const [decorated] = await decorateTablesWithStatus([table]);
+	return { data: decorated };
 };

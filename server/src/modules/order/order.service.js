@@ -1,11 +1,40 @@
 import Order from "./order.model.js";
 import MenuItem from "../menu/menu.model.js";
 import Table from "../table/table.model.js";
+import { completeActiveReservationForTable } from "../reservation/reservation.service.js";
 
 const createError = (status, message) => {
 	const error = new Error(message);
 	error.status = status;
 	return error;
+};
+
+// Normalize incoming items array, validate menu items, return [normalized, totalPrice].
+const normalizeAndPriceItems = async (items) => {
+	if (!Array.isArray(items) || !items.length) {
+		throw createError(400, "Brakuje pozycji zamówienia");
+	}
+
+	let totalPrice = 0;
+	const normalized = [];
+	for (const item of items) {
+		const menuId = item.menuItemId || item.menuId || item.id;
+		const quantity = item.quantity || item.qty || item.count;
+
+		if (!menuId || !quantity) {
+			throw createError(400, "Każda pozycja musi zawierać menuItemId i quantity");
+		}
+
+		const menuItem = await MenuItem.findById(menuId);
+		if (!menuItem) {
+			throw createError(404, "Jedna z pozycji menu nie została znaleziona");
+		}
+
+		normalized.push({ menuItemId: menuItem._id, quantity });
+		totalPrice += Number(menuItem.price) * Number(quantity);
+	}
+
+	return { normalized, totalPrice };
 };
 
 export const createOrder = async (payload, user) => {
@@ -18,76 +47,70 @@ export const createOrder = async (payload, user) => {
 		throw createError(401, "Brak poprawnych danych użytkownika w tokenie");
 	}
 
-	if (!Array.isArray(items) || !items.length) {
-		throw createError(400, "Brakuje wymaganych danych");
-	}
-
-	let totalPrice = 0;
-	const normalizedItems = [];
-
-	for (const item of items) {
-		// accept a few possible keys from client: menuItemId, menuId, id
-		const menuId = item.menuItemId || item.menuId || item.id;
-		const quantity = item.quantity || item.qty || item.count;
-
-		if (!menuId || !quantity) {
-			throw createError(400, "Każda pozycja musi zawierać menuItemId i quantity");
-		}
-
-		const menuItem = await MenuItem.findById(menuId);
-		if (!menuItem) {
-			console.error('❌ MenuItem not found:', item.menuItemId);
-			throw createError(404, "Jedna z pozycji menu nie została znaleziona");
-		}
-
-		normalizedItems.push({
-			menuItemId: menuItem._id,
-			quantity
-		});
-		totalPrice += Number(menuItem.price) * Number(quantity);
-	}
+	const { normalized, totalPrice } = await normalizeAndPriceItems(items);
 
 	if (tableId) {
-		console.log('🔍 Looking for table with ID:', tableId);
 		const table = await Table.findById(tableId);
 		if (!table) {
-			console.error('❌ Table not found with ID:', tableId);
 			throw createError(404, "Stolik nie został znaleziony");
 		}
-		console.log('✅ Table found:', table.tableNumber);
 	}
 
-	const existingOpenOrder = await Order.findOne({
-		tableId: tableId || null,
-		status: "open"
-	});
-
-	if (existingOpenOrder) {
-		console.error('❌ Open order already exists for table:', tableId);
-		throw createError(400, "Dla tego stolika istnieje już otwarte zamówienie");
+	// If an open order already exists for this table, merge items into it
+	// instead of erroring out. This lets the staff add more dishes to an
+	// existing tab (e.g. a customer ordering more drinks).
+	if (tableId) {
+		const existingOpenOrder = await Order.findOne({ tableId, status: "open" });
+		if (existingOpenOrder) {
+			console.log('ℹ️ Open order exists for table, replacing items:', existingOpenOrder._id);
+			existingOpenOrder.items = normalized;
+			existingOpenOrder.totalPrice = totalPrice;
+			if (waiter) existingOpenOrder.waiter = waiter;
+			const saved = await existingOpenOrder.save();
+			await Table.findByIdAndUpdate(tableId, { orderId: saved._id });
+			return { message: "Zamówienie zostało zaktualizowane", data: saved };
+		}
 	}
 
 	const newOrder = new Order({
 		userId,
 		tableId: tableId || null,
 		waiter: waiter || null,
-		items: normalizedItems,
+		items: normalized,
 		totalPrice,
 		status: "open"
 	});
 
 	const savedOrder = await newOrder.save();
 	console.log('✅ Order saved:', savedOrder._id);
-		// If order is attached to a table, mark table as occupied and store orderId there
-		if (savedOrder.tableId) {
-			try {
-				await Table.findByIdAndUpdate(savedOrder.tableId, { status: 'occupied', orderId: savedOrder._id });
-				console.log(`✅ Table ${savedOrder.tableId} set to occupied and linked to order ${savedOrder._id}`);
-			} catch (err) {
-				console.error('❌ Failed to link order to table:', err);
-			}
+
+	if (savedOrder.tableId) {
+		try {
+			await Table.findByIdAndUpdate(savedOrder.tableId, { orderId: savedOrder._id });
+			console.log(`✅ Table ${savedOrder.tableId} linked to order ${savedOrder._id}`);
+		} catch (err) {
+			console.error('❌ Failed to link order to table:', err);
 		}
+	}
 	return { message: "Zamówienie zostało utworzone", data: savedOrder };
+};
+
+export const updateOrderItems = async (id, payload) => {
+	const { items, waiter } = payload;
+	const order = await Order.findById(id);
+	if (!order) {
+		throw createError(404, "Zamówienie nie zostało znalezione");
+	}
+	if (order.status !== "open") {
+		throw createError(400, "Można edytować wyłącznie otwarte zamówienia");
+	}
+
+	const { normalized, totalPrice } = await normalizeAndPriceItems(items);
+	order.items = normalized;
+	order.totalPrice = totalPrice;
+	if (typeof waiter !== "undefined") order.waiter = waiter || null;
+	const saved = await order.save();
+	return { message: "Pozycje zamówienia zostały zaktualizowane", data: saved };
 };
 
 export const getAllOrders = async () => {
@@ -136,11 +159,15 @@ export const completeOrder = async (id) => {
 		throw createError(404, "Zamówienie nie zostało znalezione");
 	}
 
-	// Jeśli zamówienie jest przypisane do stolika, zmień jego status na 'free'
 	if (updatedOrder.tableId) {
 		const tableId = updatedOrder.tableId?._id || updatedOrder.tableId;
-		await Table.findByIdAndUpdate(tableId, { status: "available", orderId: null });
-		console.log(`✅ Order ${id} marked as paid, table ${updatedOrder.tableId} set to free`);
+		// Detach the order from the table; effective status (free/reserved)
+		// will be re-derived on the next read from upcoming reservations.
+		await Table.findByIdAndUpdate(tableId, { orderId: null });
+		// If the customer was a checked-in reservation, mark it completed so
+		// the table doesn't keep showing as "active".
+		await completeActiveReservationForTable(tableId);
+		console.log(`✅ Order ${id} paid, table ${tableId} unlinked, active reservation closed if any`);
 	}
 
 	return { message: "Zamówienie zostało opłacone", data: updatedOrder };

@@ -10,6 +10,10 @@ class AuthService {
     await apiService.getClient().post('/auth/register', { email, password });
   }
 
+  async changePassword(email: string, oldPassword: string, newPassword: string): Promise<void> {
+    await apiService.getClient().post('/auth/change-password', { email, oldPassword, newPassword });
+  }
+
   async getWaiters(): Promise<Array<{ _id: string; email: string }>> {
     const response = await apiService.getClient().get('/auth/waiters');
     return response.data?.waiters || [];

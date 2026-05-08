@@ -71,18 +71,22 @@ export class ReservationModel {
   static fromAPI(data: any): Reservation {
     const statusMap: Record<string, Reservation['status']> = {
       pending: 'pending',
-      active: 'accepted',
       accepted: 'accepted',
+      active: 'active',
+      completed: 'completed',
       rejected: 'rejected',
       cancelled: 'cancelled'
     };
 
     const dateSource = data.date || data.reservationDate;
     const parsedDate = dateSource ? new Date(dateSource) : null;
+    const normalizedDate = parsedDate && !Number.isNaN(parsedDate.getTime())
+      ? parsedDate.toISOString().slice(0, 10)
+      : (typeof dateSource === 'string' ? dateSource.slice(0, 10) : '');
 
     return {
       id: (data.id || data._id || '').toString(),
-      date: parsedDate ? parsedDate.toISOString().slice(0, 10) : '',
+      date: normalizedDate,
       time: data.time || data.startTime || '',
       guests: Number(data.guests ?? data.numberOfGuests ?? 0),
       status: statusMap[data.status] || 'pending',
