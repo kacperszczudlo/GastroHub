@@ -8,6 +8,7 @@ interface AuthContextType {
   email: string | null;
   login: (email: string, password: string) => Promise<UserRole>;
   register: (email: string, password: string) => Promise<UserRole>;
+  changePassword: (email: string, oldPassword: string, newPassword: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -65,6 +66,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return applySession(token);
   };
 
+  const changePassword = async (email: string, oldPassword: string, newPassword: string) => {
+    await authService.changePassword(email, oldPassword, newPassword);
+  };
+
   const logout = () => {
     setRole(null);
     setEmail(null);
@@ -73,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ role, email, login, register, logout }}>
+    <AuthContext.Provider value={{ role, email, login, register, changePassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

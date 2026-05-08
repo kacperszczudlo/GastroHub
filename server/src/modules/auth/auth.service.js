@@ -109,3 +109,42 @@ export const getWaiters = async () => {
 	const waiters = await User.find({ role: "waiter" }, "_id email");
 	return { waiters };
 };
+
+export const changePassword = async ({ email, oldPassword, newPassword }) => {
+	if (!email || !oldPassword || !newPassword) {
+		throw createError(400, "Email, stare hasło i nowe hasło są wymagane");
+	}
+
+	const normalizedEmail = normalizeEmail(email);
+	const normalizedNewPassword = newPassword.trim();
+	if (
+		normalizedNewPassword.length < PASSWORD_MIN_LENGTH ||
+		!PASSWORD_POLICY_REGEX.test(normalizedNewPassword)
+	) {
+		throw createError(
+			400,
+			"Hasło musi mieć min. 8 znaków oraz zawierać małą i dużą literę, cyfrę i znak specjalny"
+		);
+	}
+
+	const user = await User.findOne({ email: normalizedEmail });
+	if (!user) {
+		throw createError(400, "Nieprawidłowy email lub stare hasło");
+	}
+
+	const isOldPasswordCorrect = await bcrypt.compare(oldPassword, user.password);
+	if (!isOldPasswordCorrect) {
+		throw createError(400, "Nieprawidłowy email lub stare hasło");
+	}
+
+	const isSameAsOld = await bcrypt.compare(normalizedNewPassword, user.password);
+	if (isSameAsOld) {
+		throw createError(400, "Nowe hasło musi różnić się od starego");
+	}
+
+	const salt = await bcrypt.genSalt(10);
+	user.password = await bcrypt.hash(normalizedNewPassword, salt);
+	await user.save();
+
+	return { message: "Hasło zostało zmienione" };
+};

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Utensils } from 'lucide-react';
+import { Eye, EyeOff, Utensils } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 
@@ -7,34 +7,74 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/;
 
 export function LoginScreen() {
-  const { login, register } = useAuth();
+  const { login, register, changePassword } = useAuth();
   const { setCurrentView } = useApp();
   const [mode, setMode] = React.useState<'login' | 'register'>('login');
+  const [isResetMode, setIsResetMode] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string>('');
+  const [successMsg, setSuccessMsg] = React.useState<string>('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showNewPassword, setShowNewPassword] = React.useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
+
+  const switchMode = (nextMode: 'login' | 'register') => {
+    setMode(nextMode);
+    setIsResetMode(false);
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const passwordInputClass =
+    'w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-orange-500 focus:outline-none';
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (mode === 'register') {
-      if (!EMAIL_REGEX.test(normalizedEmail)) {
-        setErrorMsg('Podaj poprawny adres email.');
-        return;
-      }
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      setErrorMsg('Podaj poprawny adres email.');
+      return;
+    }
 
-      if (password.length < 8 || !PASSWORD_POLICY_REGEX.test(password)) {
+    if (mode === 'register' || isResetMode) {
+      const candidatePassword = mode === 'register' ? password : newPassword;
+
+      if (candidatePassword.length < 8 || !PASSWORD_POLICY_REGEX.test(candidatePassword)) {
         setErrorMsg('Hasło musi mieć min. 8 znaków oraz zawierać małą i dużą literę, cyfrę i znak specjalny.');
         return;
       }
     }
 
+    if (isResetMode && password === newPassword) {
+      setErrorMsg('Nowe hasło musi różnić się od starego.');
+      return;
+    }
+
+    if (isResetMode && newPassword !== confirmNewPassword) {
+      setErrorMsg('Nowe hasło i powtórzone hasło muszą być takie same.');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      if (isResetMode) {
+        await changePassword(normalizedEmail, password, newPassword);
+        setSuccessMsg('Hasło zostało zmienione. Możesz się teraz zalogować nowym hasłem.');
+        setIsResetMode(false);
+        setPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+        return;
+      }
+
       const role = mode === 'register' ? await register(normalizedEmail, password) : await login(normalizedEmail, password);
 
       if (role === 'admin') {
@@ -51,6 +91,10 @@ export function LoginScreen() {
     }
   };
 
+  const passwordLabel = isResetMode ? 'Stare hasło' : 'Hasło';
+  const submitLabel =
+    loading ? 'Przetwarzanie...' : isResetMode ? 'Zmień hasło' : mode === 'login' ? 'Zaloguj się' : 'Utwórz konto';
+
   return (
     <div className="flex-1 flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
@@ -61,6 +105,12 @@ export function LoginScreen() {
         {errorMsg && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {errorMsg}
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            {successMsg}
           </div>
         )}
 
@@ -76,20 +126,91 @@ export function LoginScreen() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Hasło</label>
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              required
-              minLength={8}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
-            />
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">{passwordLabel}</label>
+            <div className="relative">
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={mode === 'register' ? 8 : undefined}
+                className={passwordInputClass}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Ukryj hasło' : 'Pokaż hasło'}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
+          {mode === 'login' && !isResetMode && (
+            <div className="-mt-2 text-right">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsResetMode(true);
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                }}
+                className="text-sm font-medium text-orange-600 hover:text-orange-700"
+              >
+                Nie pamiętasz hasła?
+              </button>
+            </div>
+          )}
+          {isResetMode && (
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Nowe hasło</label>
+              <div className="relative">
+                <input
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  type={showNewPassword ? 'text' : 'password'}
+                  required
+                  minLength={8}
+                  className={passwordInputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((prev) => !prev)}
+                  aria-label={showNewPassword ? 'Ukryj nowe hasło' : 'Pokaż nowe hasło'}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+          )}
+          {isResetMode && (
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Powtórz nowe hasło</label>
+              <div className="relative">
+                <input
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  type={showConfirmNewPassword ? 'text' : 'password'}
+                  required
+                  minLength={8}
+                  className={passwordInputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmNewPassword((prev) => !prev)}
+                  aria-label={showConfirmNewPassword ? 'Ukryj powtórzone hasło' : 'Pokaż powtórzone hasło'}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                >
+                  {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => setMode('login')}
+              onClick={() => switchMode('login')}
               className={`rounded-lg px-3 py-2 text-sm font-semibold border ${
                 mode === 'login'
                   ? 'bg-orange-600 text-white border-orange-600'
@@ -100,7 +221,7 @@ export function LoginScreen() {
             </button>
             <button
               type="button"
-              onClick={() => setMode('register')}
+              onClick={() => switchMode('register')}
               className={`rounded-lg px-3 py-2 text-sm font-semibold border ${
                 mode === 'register'
                   ? 'bg-orange-600 text-white border-orange-600'
@@ -115,7 +236,7 @@ export function LoginScreen() {
             disabled={loading}
             className="w-full bg-gray-900 hover:bg-black text-white font-bold py-3 px-4 rounded-xl shadow-md transition"
           >
-            {loading ? 'Przetwarzanie...' : mode === 'login' ? 'Zaloguj się' : 'Utwórz konto'}
+            {submitLabel}
           </button>
         </form>
       </div>
