@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useUiFeedback } from '../../context/UiFeedbackContext';
 import { MenuItem } from '../../types';
 import menuService from '../../services/menu.service';
+import axios from 'axios';
 
 export function AdminMenuManager() {
   const { menu, setMenu } = useApp();
@@ -54,12 +55,44 @@ export function AdminMenuManager() {
     setIsModalOpen(true);
   };
 
-  const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Nie udało się odczytać pliku'));
-    reader.readAsDataURL(file);
-  });
+  const compressImageToDataUrl = (file: File, maxDimension = 1400, quality = 0.8) =>
+    new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        if (width > maxDimension || height > maxDimension) {
+          const scale = Math.min(maxDimension / width, maxDimension / height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error('Nie udało się przygotować obrazu'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        URL.revokeObjectURL(objectUrl);
+        resolve(compressed);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Nie udało się przetworzyć pliku graficznego'));
+      };
+
+      img.src = objectUrl;
+    });
 
   const handleSaveForm = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -68,7 +101,12 @@ export function AdminMenuManager() {
 
     let imageValue = selectedImage;
     if (imageFile instanceof File && imageFile.size > 0) {
-      imageValue = await fileToDataUrl(imageFile);
+      imageValue = await compressImageToDataUrl(imageFile);
+
+      if (imageValue.length > 1_200_000) {
+        showError('Zdjęcie jest zbyt duże po kompresji. Wybierz mniejszy plik.');
+        return;
+      }
     }
 
     if (!imageValue && !editingItem) {
@@ -99,8 +137,12 @@ export function AdminMenuManager() {
         });
         setMenu([...menu, created]);
       }
-    } catch {
-      showError('Nie udało się zapisać zmian w menu.');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 413) {
+        showError('Zdjęcie jest za duże dla serwera. Spróbuj mniejszego pliku.');
+      } else {
+        showError('Nie udało się zapisać zmian w menu.');
+      }
       return;
     }
     showSuccess(editingItem ? 'Danie zostało zaktualizowane.' : 'Danie zostało dodane.');
@@ -226,7 +268,12 @@ export function AdminMenuManager() {
                   onChange={async (event) => {
                     const file = event.currentTarget.files?.[0];
                     if (file) {
-                      setSelectedImage(await fileToDataUrl(file));
+                      try {
+                        const compressed = await compressImageToDataUrl(file);
+                        setSelectedImage(compressed);
+                      } catch {
+                        showError('Nie udało się przetworzyć wybranego zdjęcia.');
+                      }
                     }
                   }}
                 />
