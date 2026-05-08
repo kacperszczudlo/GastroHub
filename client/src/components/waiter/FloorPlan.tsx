@@ -4,48 +4,55 @@ import { useApp } from '../../context/AppContext';
 import { Table } from '../../types';
 import tableService from '../../services/table.service';
 import orderService from '../../services/order.service';
+import reservationService from '../../services/reservation.service';
 
 interface FloorPlanProps {
   editable?: boolean;
 }
 
 export function FloorPlan({ editable = false }: FloorPlanProps) {
-  const { tables, setTables, setSelectedTable } = useApp();
+  const { tables, setTables, setSelectedTable, setReservations } = useApp();
   const [localTables, setLocalTables] = useState<Table[]>(tables);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState(editable);
   const [error, setError] = useState('');
   const [openOrders, setOpenOrders] = useState<any[]>([]);
 
-  // Fetch tables from backend on initial mount
+  // Fetch tables (and reservations - needed for the table modal & status hints)
+  // on mount and on a short interval so the floor plan reflects check-ins,
+  // newly opened orders, etc.
   useEffect(() => {
     let mounted = true;
 
-    const fetchTables = async () => {
+    const fetchAll = async () => {
       try {
-        const apiTables = await tableService.getAll();
-        if (mounted) {
-          setTables(apiTables);
-          setLocalTables(apiTables);
-          setError('');
-        }
+        const [apiTables, apiReservations] = await Promise.all([
+          tableService.getAll(),
+          reservationService.getAll().catch(() => [])
+        ]);
+        if (!mounted) return;
+        setTables(apiTables);
+        setLocalTables(apiTables);
+        setReservations(apiReservations);
+        setError('');
       } catch (err) {
-        if (mounted) {
-          console.error('Błąd pobierania stolik:', err);
-          setError('❌ Nie udało się pobrać danych stolików. Sprawdź czy serwer API działa.');
-          setTables([]);
-          setLocalTables([]);
-        }
+        if (!mounted) return;
+        console.error('Błąd pobierania stolików:', err);
+        setError('❌ Nie udało się pobrać danych stolików. Sprawdź czy serwer API działa.');
+        setTables([]);
+        setLocalTables([]);
       }
     };
 
-    // Zawsze pobierz z backendu żeby mieć najnowsze pozycje
-    fetchTables();
+    fetchAll();
+    // refresh every 30s so "reserved" window kicks in / out automatically
+    const interval = setInterval(fetchAll, 30000);
 
     return () => {
       mounted = false;
+      clearInterval(interval);
     };
-  }, [setTables]);
+  }, [setTables, setReservations]);
 
   // Sync localTables with tables from context when they change
   useEffect(() => {
@@ -192,40 +199,60 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
         onDragOver={e => dragMode && e.preventDefault()}
         onDrop={handleDrop}
       >
-        {localTables.map(table => (
-          <div
-            key={table.id}
-            draggable={dragMode}
-            onDragStart={e => handleDragStart(e, table.id)}
-            onClick={() => handleTableClick(table)}
-            className={`absolute border-2 rounded-xl shadow-md flex flex-col items-center justify-center transition-colors
-              ${getStatusColor(table.status)}
-              ${dragMode ? 'hover:ring-4 ring-purple-300 cursor-move' : 'cursor-pointer hover:scale-105'}
-              ${draggingId === table.id ? 'opacity-50' : ''}
-            `}
-            style={{
-              left: `${table.x}%`,
-              top: `${table.y}%`,
-              width: table.seats > 4 ? '120px' : '80px',
-              height: table.seats > 4 ? '80px' : '80px'
-            }}
-          >
-            <span className="font-bold text-lg">#{table.number}</span>
-            <span className="text-xs flex items-center gap-1">
-              <Users className="h-3 w-3" /> {table.seats}
-            </span>
-            {openOrders.some(o => o.tableId?._id === table.id || o.tableId === table.id) && (
-              <div className="absolute -bottom-2 -left-2 bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full shadow border border-white font-bold">
-                {openOrders.find(o => o.tableId?._id === table.id || o.tableId === table.id)?.items?.length || 0} pozycji
-              </div>
-            )}
-            {table.waiter && (
-              <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full shadow border border-white">
-                {table.waiter.split(' ')[0]}
-              </div>
-            )}
-          </div>
-        ))}
+        {localTables.map(table => {
+          // Find the open order for this table tolerantly: tableId from
+          // the API may be either a populated object {_id, ...} or a raw
+          // ObjectId string, and either side may be a Mongo ObjectId
+          // instance that needs toString() before comparison.
+          const tableIdStr = String(table.id);
+          const orderForTable = openOrders.find(o => {
+            const raw = o?.tableId;
+            if (!raw) return false;
+            const otid = typeof raw === 'object' ? (raw._id ?? raw.id ?? raw) : raw;
+            return otid != null && String(otid) === tableIdStr;
+          });
+          const itemCount = orderForTable?.items?.length || 0;
+          return (
+            <div
+              key={table.id}
+              draggable={dragMode}
+              onDragStart={e => handleDragStart(e, table.id)}
+              onClick={() => handleTableClick(table)}
+              className={`absolute border-2 rounded-xl shadow-md flex flex-col items-center justify-center transition-colors
+                ${getStatusColor(table.status)}
+                ${dragMode ? 'hover:ring-4 ring-purple-300 cursor-move' : 'cursor-pointer hover:scale-105'}
+                ${draggingId === table.id ? 'opacity-50' : ''}
+              `}
+              style={{
+                left: `${table.x}%`,
+                top: `${table.y}%`,
+                width: table.seats > 4 ? '120px' : '80px',
+                height: table.seats > 4 ? '80px' : '80px'
+              }}
+            >
+              <span className="font-bold text-lg">#{table.number}</span>
+              <span className="text-xs flex items-center gap-1">
+                <Users className="h-3 w-3" /> {table.seats}
+              </span>
+              {orderForTable && (
+                <div
+                  title={`Otwarte zamówienie: ${itemCount} ${itemCount === 1 ? 'pozycja' : itemCount < 5 ? 'pozycje' : 'pozycji'}`}
+                  className="absolute -top-2 -left-2 bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full shadow border border-white font-bold z-10 whitespace-nowrap"
+                >
+                  {itemCount} {itemCount === 1 ? 'pozycja' : itemCount < 5 ? 'pozycje' : 'pozycji'}
+                </div>
+              )}
+              {table.waiter && (
+                <div
+                  title={table.waiter}
+                  className="absolute -bottom-2 -right-2 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full shadow border border-white max-w-[100px] truncate"
+                >
+                  {table.waiter.includes('@') ? table.waiter.split('@')[0] : table.waiter.split(' ')[0]}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-8 bg-gray-800 rounded-b-xl flex items-center justify-center text-white text-xs font-bold uppercase tracking-widest">
           Bar

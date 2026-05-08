@@ -7,6 +7,24 @@ const createError = (status, message) => {
 	return error;
 };
 
+// How long before reservation start the table becomes "reserved" (yellow).
+export const RESERVATION_HOLD_MINUTES = 60;
+
+// Build a JS Date by combining a stored reservationDate with HH:MM start time.
+// reservationDate from Mongo is a Date at UTC midnight; we use its UTC Y/M/D
+// and apply local hours from startTime so it represents local restaurant time.
+export const buildReservationStart = (reservationDate, startTime) => {
+	const d = new Date(reservationDate);
+	if (Number.isNaN(d.getTime())) return null;
+	const y = d.getUTCFullYear();
+	const m = d.getUTCMonth();
+	const day = d.getUTCDate();
+	const [hh = 0, mm = 0] = String(startTime || "0:0").split(":").map(n => Number(n) || 0);
+	return new Date(y, m, day, hh, mm, 0, 0);
+};
+
+export const buildReservationEnd = (reservationDate, endTime) => buildReservationStart(reservationDate, endTime);
+
 export const createReservation = async (payload, user) => {
 	const { reservationDate, startTime, endTime, numberOfGuests } = payload;
 	const userId = user?.userId;
@@ -90,6 +108,9 @@ export const updateReservationStatus = async (id, payload) => {
 	}
 
 	if (status === "accepted") {
+		// Assign a free table for the requested time window, but DO NOT
+		// permanently mark the table as 'reserved' - the table status is
+		// derived from upcoming reservations + open orders at read time.
 		const table = await findAvailableTable(
 			reservation.numberOfGuests,
 			reservation.reservationDate,
@@ -103,18 +124,10 @@ export const updateReservationStatus = async (id, payload) => {
 
 		reservation.tableId = table._id;
 		reservation.status = "accepted";
-		
-		// Zmień status stolika na 'reserved'
-		await Table.findByIdAndUpdate(table._id, { status: "reserved" });
-		console.log(`✅ Table ${table.tableNumber} set to reserved for reservation ${id}`);
+		console.log(`✅ Reservation ${id} accepted -> table ${table.tableNumber} assigned`);
 	} else if (status === "rejected" || status === "cancelled") {
 		reservation.status = status;
-
-		if (reservation.tableId) {
-			await Table.findByIdAndUpdate(reservation.tableId, { status: "available" });
-			console.log(`✅ Table restored to available after ${status} reservation ${id}`);
-		}
-
+		// Detach table; the table's effective status will be recomputed on the next read.
 		reservation.tableId = null;
 	} else {
 		reservation.status = status;
@@ -126,20 +139,60 @@ export const updateReservationStatus = async (id, payload) => {
 	return { message: "Status rezerwacji został zaktualizowany", data: populated };
 };
 
+export const checkInReservation = async (id, user) => {
+	const reservation = await Reservation.findById(id);
+	if (!reservation) {
+		throw createError(404, "Rezerwacja nie została znaleziona");
+	}
+	if (reservation.status !== "accepted") {
+		throw createError(400, "Tylko zaakceptowana rezerwacja może być oznaczona jako 'klient przybył'");
+	}
+	if (!reservation.tableId) {
+		throw createError(400, "Rezerwacja nie ma przypisanego stolika");
+	}
+
+	reservation.status = "active";
+	await reservation.save();
+	console.log(`✅ Reservation ${id} checked in by ${user?.email || "unknown"}`);
+
+	const populated = await populateReservation(Reservation.findById(reservation._id));
+	return { message: "Klient został oznaczony jako przybyły", data: populated };
+};
+
+export const completeReservation = async (id, user) => {
+	const reservation = await Reservation.findById(id);
+	if (!reservation) {
+		throw createError(404, "Rezerwacja nie została znaleziona");
+	}
+	if (reservation.status !== "active") {
+		throw createError(400, "Tylko rezerwację 'klient na miejscu' można ręcznie zakończyć");
+	}
+	reservation.status = "completed";
+	await reservation.save();
+	console.log(`✅ Reservation ${id} manually completed by ${user?.email || "unknown"}`);
+	const populated = await populateReservation(Reservation.findById(reservation._id));
+	return { message: "Rezerwacja została zakończona", data: populated };
+};
+
+export const completeActiveReservationForTable = async (tableId) => {
+	if (!tableId) return null;
+	const reservation = await Reservation.findOne({ tableId, status: "active" });
+	if (!reservation) return null;
+	reservation.status = "completed";
+	await reservation.save();
+	console.log(`✅ Active reservation ${reservation._id} on table ${tableId} marked completed`);
+	return reservation;
+};
+
 export const cancelReservation = async (id) => {
 	const reservation = await Reservation.findById(id);
-	
+
 	if (!reservation) {
 		throw createError(404, "Rezerwacja nie znaleziona");
 	}
 
-	// Jeśli był przypisany stolik, przywróć go na 'free'
-	if (reservation.tableId) {
-		await Table.findByIdAndUpdate(reservation.tableId, { status: "available" });
-		console.log(`✅ Table ${reservation.tableId} restored to available after cancelling reservation ${id}`);
-	}
-
 	reservation.status = "cancelled";
+	reservation.tableId = null;
 	await reservation.save();
 
 	const populated = await populateReservation(Reservation.findById(reservation._id));
@@ -150,10 +203,6 @@ export const hardDeleteReservation = async (id) => {
 	const reservation = await Reservation.findByIdAndDelete(id);
 	if (!reservation) {
 		throw createError(404, 'Rezerwacja nie znaleziona');
-	}
-	// If a table was reserved for this reservation, free it
-	if (reservation.tableId) {
-		await Table.findByIdAndUpdate(reservation.tableId, { status: 'available' });
 	}
 	return { message: 'Rezerwacja została trwale usunięta', data: reservation };
 };

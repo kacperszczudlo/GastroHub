@@ -71,8 +71,9 @@ export class ReservationModel {
   static fromAPI(data: any): Reservation {
     const statusMap: Record<string, Reservation['status']> = {
       pending: 'pending',
-      active: 'accepted',
       accepted: 'accepted',
+      active: 'active',
+      completed: 'completed',
       rejected: 'rejected',
       cancelled: 'cancelled'
     };

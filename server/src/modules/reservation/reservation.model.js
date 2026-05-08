@@ -7,7 +7,7 @@ const reservationSchema = new mongoose.Schema({
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
     numberOfGuests: { type: Number, required: true },
-    status: { type: String, enum: ['pending', 'accepted', 'rejected', 'active', 'cancelled'], default: 'pending' }
+    status: { type: String, enum: ['pending', 'accepted', 'rejected', 'active', 'completed', 'cancelled'], default: 'pending' }
 }, { timestamps: true });
 
 export default mongoose.model("Reservation", reservationSchema);

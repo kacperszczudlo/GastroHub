@@ -40,6 +40,16 @@ class OrderService {
     }
   }
 
+  async updateOrderItems(orderId: string, payload: { items: Array<{ menuItemId: string; quantity: number }>; waiter?: string | null }): Promise<any> {
+    try {
+      const response = await apiService.getClient().put(`/orders/${orderId}/items`, payload);
+      return response.data?.data || response.data;
+    } catch (error) {
+      console.error('Error updating order items:', error);
+      throw error;
+    }
+  }
+
   async completeOrder(orderId: string): Promise<any> {
     try {
       const response = await apiService.getClient().post(`/orders/${orderId}/complete`);

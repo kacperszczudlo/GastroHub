@@ -93,6 +93,29 @@ class ReservationService {
       throw error;
     }
   }
+
+  // Mark an accepted reservation as "klient przybył" (active).
+  async checkIn(id: string): Promise<Reservation> {
+    try {
+      const response = await apiService.getClient().post(`/reservations/${id}/check-in`);
+      return ReservationModel.fromAPI(response.data.data || response.data);
+    } catch (error) {
+      console.error('Error checking in reservation:', error);
+      throw error;
+    }
+  }
+
+  // Manually finish an "active" reservation - frees the table without
+  // requiring a paid order (e.g. customer left without ordering).
+  async complete(id: string): Promise<Reservation> {
+    try {
+      const response = await apiService.getClient().post(`/reservations/${id}/complete`);
+      return ReservationModel.fromAPI(response.data.data || response.data);
+    } catch (error) {
+      console.error('Error completing reservation:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ReservationService();

@@ -135,6 +135,14 @@ export function AdminReservationsManager() {
                     <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-bold">
                       Zatwierdzona
                     </span>
+                  ) : res.status === 'active' ? (
+                    <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-bold">
+                      Klient na miejscu
+                    </span>
+                  ) : res.status === 'completed' ? (
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">
+                      Zrealizowana
+                    </span>
                   ) : res.status === 'cancelled' ? (
                     <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-bold">
                       Anulowana

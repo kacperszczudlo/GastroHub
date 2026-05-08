@@ -17,7 +17,12 @@ export type ViewType =
 export type TableStatus = 'free' | 'occupied' | 'reserved';
 
 // Status rezerwacji
-export type ReservationStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
+// - pending: czeka na decyzję admina
+// - accepted: zaakceptowana, klient jeszcze nie przybył
+// - active: klient już przybył (kelner zrobił check-in)
+// - completed: rezerwacja zrealizowana (po opłaceniu zamówienia)
+// - rejected/cancelled: odrzucona/anulowana
+export type ReservationStatus = 'pending' | 'accepted' | 'active' | 'completed' | 'rejected' | 'cancelled';
 
 // Interfejs Menu Item
 export interface MenuItem {

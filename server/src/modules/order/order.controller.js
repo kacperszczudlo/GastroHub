@@ -37,6 +37,15 @@ export const getOpenOrderByTable = async (req, res) => {
     }
 }
 
+export const updateOrderItems = async (req, res) => {
+    try {
+        const result = await orderService.updateOrderItems(req.params.id, req.body);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas aktualizacji pozycji zamówienia" });
+    }
+}
+
 export const completeOrder = async (req, res) => {
     try {
         const result = await orderService.completeOrder(req.params.id);
