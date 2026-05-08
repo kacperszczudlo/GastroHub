@@ -92,9 +92,11 @@ function MenuItemCard({ item }: MenuItemCardProps) {
           className="w-full h-full object-cover rounded-xl"
         />
       </div>
-      <div className="p-6">
+      <div className="p-6 flex flex-col">
         <h3 className="text-xl font-black text-gray-900 uppercase">{item.name}</h3>
-        <p className="text-gray-500 text-sm mt-2 h-10">{item.desc}</p>
+        <p className="text-gray-500 text-sm mt-2 break-words leading-6">
+          {item.desc}
+        </p>
         <div className="mt-4 flex justify-between items-center">
           <span className="text-2xl font-bold text-orange-600">
             {item.price.toFixed(2)} zł
