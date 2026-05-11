@@ -6,8 +6,10 @@ import reservationService from '../../services/reservation.service';
 
 export function ClientReservationsList() {
   const { reservations, setReservations, tables } = useApp();
+  const { role } = useAuth();
 
   useEffect(() => {
+    if (!role) return;
     let mounted = true;
 
     const fetchReservations = async () => {

@@ -89,6 +89,20 @@ class ReservationService {
       const response = await apiService.getClient().patch(`/reservations/${id}`, payload);
       return ReservationModel.fromAPI(response.data.data || response.data);
     } catch (error) {
+      // When accepting "last-minute" reservations, backend can update state but the
+      // client may still observe a transient 404 (race with read-model refresh).
+      // Keep behavior strict for other failures.
+      const status = Number((error as any)?.response?.status || 0);
+      if (status === 404) {
+        try {
+          const refreshed = await this.getAll();
+          const found = refreshed.find(item => item.id === id);
+          if (found) return found;
+        } catch {
+          // Ignore refresh errors and throw original below.
+        }
+      }
+
       console.error('Error updating reservation:', error);
       throw error;
     }
