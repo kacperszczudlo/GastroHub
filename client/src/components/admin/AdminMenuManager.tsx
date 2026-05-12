@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Plus, Edit3, Trash2, XCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useUiFeedback } from '../../context/UiFeedbackContext';
-import { MenuItem } from '../../types';
+import type { MenuItem } from '../../types';
 import menuService from '../../services/menu.service';
 import axios from 'axios';
 
@@ -94,7 +94,7 @@ export function AdminMenuManager() {
       img.src = objectUrl;
     });
 
-  const handleSaveForm = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveForm = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const imageFile = formData.get('imageFile');

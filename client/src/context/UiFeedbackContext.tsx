@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 type NotificationType = 'success' | 'error';
@@ -23,7 +23,7 @@ type UiFeedbackContextValue = {
 
 const UiFeedbackContext = createContext<UiFeedbackContextValue | undefined>(undefined);
 
-export function UiFeedbackProvider({ children }: { children: React.ReactNode }) {
+export function UiFeedbackProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});

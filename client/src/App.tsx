@@ -1,4 +1,3 @@
-import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
 import { UiFeedbackProvider } from './context/UiFeedbackContext';
@@ -9,7 +8,7 @@ import { AdminReservationsManager, AdminMenuManager, ScheduleView } from './comp
 
 function AppContent() {
   const { role } = useAuth();
-  const { currentView, setCurrentView } = useApp();
+  const { currentView } = useApp();
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
@@ -19,17 +18,14 @@ function AppContent() {
         <LoginScreen />
       ) : (
         <main className="pb-10">
-          {/* WIDOKI KLIENTA */}
           {role === 'client' && currentView === 'menu' && <ClientMenu />}
           {role === 'client' && currentView === 'reservation' && <ClientReservation />}
           {role === 'client' && currentView === 'client_reservations' && <ClientReservationsList />}
 
-          {/* WIDOKI KELNERA */}
           {role === 'waiter' && currentView === 'pos' && <WaiterPOS />}
           {role === 'waiter' && currentView === 'floor' && <FloorPlan editable={false} />}
           {role === 'waiter' && currentView === 'schedule' && <ScheduleView role={role} />}
 
-          {/* WIDOKI ADMINA */}
           {role === 'admin' && currentView === 'admin_dashboard' && <FloorPlan editable={true} />}
           {role === 'admin' && currentView === 'admin_reservations' && <AdminReservationsManager />}
           {role === 'admin' && currentView === 'schedule' && <ScheduleView role={role} />}
@@ -37,7 +33,6 @@ function AppContent() {
         </main>
       )}
 
-      {/* Globalne modale */}
       <TableModal role={role} />
     </div>
   );

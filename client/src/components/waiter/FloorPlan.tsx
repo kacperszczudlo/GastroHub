@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type DragEvent } from 'react';
 import { Users } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { Table } from '../../types';
+import type { Table } from '../../types';
 import tableService from '../../services/table.service';
 import orderService from '../../services/order.service';
 import reservationService from '../../services/reservation.service';
@@ -83,7 +83,7 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
     };
   }, []);
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {
+  const handleDragStart = (e: DragEvent<HTMLDivElement>, id: string) => {
     if (!dragMode) return;
     setDraggingId(id);
     const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -92,7 +92,7 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
     e.dataTransfer!.setData('id', id.toString());
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     if (!dragMode) return;
     e.preventDefault();
     const id = e.dataTransfer!.getData('id');

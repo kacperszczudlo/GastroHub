@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { CalendarDays, Plus, Minus, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { Schedule } from '../../types';
+import type { Schedule, UserRole } from '../../types';
 import { SHIFTS } from '../../constants';
 import authService from '../../services/auth.service';
 import scheduleService from '../../services/schedule.service';
 
 interface ScheduleViewProps {
-  role: string | null;
+  role: UserRole;
 }
 
 interface Waiter {
@@ -59,7 +59,7 @@ export function ScheduleView({ role }: ScheduleViewProps) {
     }
   }, [role]);
 
-  const handleAddSchedule = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddSchedule = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     

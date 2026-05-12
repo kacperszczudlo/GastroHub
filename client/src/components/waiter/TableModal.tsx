@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Calendar, Users, XCircle, UserCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useUiFeedback } from '../../context/UiFeedbackContext';
-import { Table as TableType, Reservation } from '../../types';
+import type { Table as TableType, Reservation, UserRole } from '../../types';
 import tableService from '../../services/table.service';
 import authService from '../../services/auth.service';
 import orderService from '../../services/order.service';
 import reservationService from '../../services/reservation.service';
 
 interface TableModalProps {
-  role: string | null;
+  role: UserRole;
 }
 
 interface Waiter {

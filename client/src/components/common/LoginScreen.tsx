@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, type FormEvent } from 'react';
 import { Eye, EyeOff, Utensils } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
@@ -9,18 +9,18 @@ const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).
 export function LoginScreen() {
   const { login, register, changePassword } = useAuth();
   const { setCurrentView } = useApp();
-  const [mode, setMode] = React.useState<'login' | 'register'>('login');
-  const [isResetMode, setIsResetMode] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
-  const [errorMsg, setErrorMsg] = React.useState<string>('');
-  const [successMsg, setSuccessMsg] = React.useState<string>('');
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [newPassword, setNewPassword] = React.useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [showNewPassword, setShowNewPassword] = React.useState(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [isResetMode, setIsResetMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [successMsg, setSuccessMsg] = useState<string>('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const switchMode = (nextMode: 'login' | 'register') => {
     setMode(nextMode);
@@ -32,7 +32,7 @@ export function LoginScreen() {
   const passwordInputClass =
     'w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-orange-500 focus:outline-none';
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');

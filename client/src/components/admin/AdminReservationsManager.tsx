@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Clock, Check, X, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useUiFeedback } from '../../context/UiFeedbackContext';

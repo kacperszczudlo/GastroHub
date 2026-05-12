@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState } from 'react';
-import type { Table, Reservation, MenuItem, Schedule } from '../types';
+import { createContext, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import type { Table, Reservation, MenuItem, Schedule, ViewType } from '../types';
 
-type SetState<T> = React.Dispatch<React.SetStateAction<T>>;
+type SetState<T> = Dispatch<SetStateAction<T>>;
 
 interface AppContextType {
-  currentView: string;
-  setCurrentView: (view: string) => void;
+  currentView: ViewType;
+  setCurrentView: SetState<ViewType>;
   
   tables: Table[];
   setTables: SetState<Table[]>;
@@ -25,8 +25,8 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [currentView, setCurrentView] = useState<string>('menu');
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [currentView, setCurrentView] = useState<ViewType>('menu');
   const [tables, setTables] = useState<Table[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);

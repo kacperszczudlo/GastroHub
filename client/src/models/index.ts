@@ -1,8 +1,5 @@
-// Modele biznesowe - mapowanie z API
-
 import type { MenuItem, Table, Reservation, Schedule } from '../types';
 
-// Model Menu
 export class MenuModel {
   static fromAPI(data: any): MenuItem {
     return {
@@ -11,7 +8,7 @@ export class MenuModel {
       category: data.category,
       price: data.price,
       image: data.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400',
-      desc: data.description || 'Brak opisu'
+      desc: data.description || 'Brak opisu',
     };
   }
 
@@ -21,18 +18,17 @@ export class MenuModel {
       category: item.category,
       price: item.price,
       image: item.image,
-      description: item.desc
+      description: item.desc,
     };
   }
 }
 
-// Model Stolika
 export class TableModel {
   static fromAPI(data: any): Table {
     const statusMap: Record<string, Table['status']> = {
       available: 'free',
       occupied: 'occupied',
-      reserved: 'reserved'
+      reserved: 'reserved',
     };
 
     return {
@@ -43,7 +39,7 @@ export class TableModel {
       x: data.x || 0,
       y: data.y || 0,
       waiter: data.waiter || null,
-      orderId: (data.orderId?._id || data.orderId || null)?.toString?.() || null
+      orderId: (data.orderId?._id || data.orderId || null)?.toString?.() || null,
     };
   }
 
@@ -51,7 +47,7 @@ export class TableModel {
     const statusMap: Record<Table['status'], string> = {
       free: 'available',
       occupied: 'occupied',
-      reserved: 'reserved'
+      reserved: 'reserved',
     };
 
     return {
@@ -61,12 +57,11 @@ export class TableModel {
       x: table.x,
       y: table.y,
       waiter: table.waiter,
-      orderId: table.orderId || null
+      orderId: table.orderId || null,
     };
   }
 }
 
-// Model Rezerwacji
 export class ReservationModel {
   static fromAPI(data: any): Reservation {
     const statusMap: Record<string, Reservation['status']> = {
@@ -75,14 +70,17 @@ export class ReservationModel {
       active: 'active',
       completed: 'completed',
       rejected: 'rejected',
-      cancelled: 'cancelled'
+      cancelled: 'cancelled',
     };
 
     const dateSource = data.date || data.reservationDate;
     const parsedDate = dateSource ? new Date(dateSource) : null;
-    const normalizedDate = parsedDate && !Number.isNaN(parsedDate.getTime())
-      ? parsedDate.toISOString().slice(0, 10)
-      : (typeof dateSource === 'string' ? dateSource.slice(0, 10) : '');
+    const normalizedDate =
+      parsedDate && !Number.isNaN(parsedDate.getTime())
+        ? parsedDate.toISOString().slice(0, 10)
+        : typeof dateSource === 'string'
+          ? dateSource.slice(0, 10)
+          : '';
 
     return {
       id: (data.id || data._id || '').toString(),
@@ -91,7 +89,7 @@ export class ReservationModel {
       guests: Number(data.guests ?? data.numberOfGuests ?? 0),
       status: statusMap[data.status] || 'pending',
       tableId: data.tableId?._id?.toString?.() || data.tableId?.toString?.() || null,
-      clientName: data.clientName || data.client_name || data.userId?.email || 'Klient'
+      clientName: data.clientName || data.client_name || data.userId?.email || 'Klient',
     };
   }
 
@@ -104,12 +102,11 @@ export class ReservationModel {
       startTime: reservation.time,
       endTime: `${endHour}:${m}`,
       numberOfGuests: reservation.guests,
-      clientName: reservation.clientName
+      clientName: reservation.clientName,
     };
   }
 }
 
-// Model Grafiku
 export class ScheduleModel {
   static fromAPI(data: any): Schedule {
     return {
@@ -117,7 +114,7 @@ export class ScheduleModel {
       _id: data._id?.toString?.() || data.id?.toString?.(),
       date: data.date,
       shift: data.shift,
-      waiter: data.waiter
+      waiter: data.waiter,
     };
   }
 
@@ -125,7 +122,7 @@ export class ScheduleModel {
     return {
       date: schedule.date,
       shift: schedule.shift,
-      waiter: schedule.waiter
+      waiter: schedule.waiter,
     };
   }
 }

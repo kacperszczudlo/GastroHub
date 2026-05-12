@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Minus, Trash2, CheckCircle, RefreshCw } from 'lucide-react';
 import { OrderItem, MenuItem } from '../../types';
 import { useApp } from '../../context/AppContext';
