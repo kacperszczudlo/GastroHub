@@ -1,25 +1,26 @@
 import jwt from "jsonwebtoken";
+import { createHttpError } from "../common/httpError.js";
 
 export const protect = (req, res, next) => {
-    try{
-        let token = req.headers.authorization;
-        if (!token || !token.startsWith("Bearer ")) {
-            return res.status(401).json({ error: "Brak tokenu autoryzacyjnego" });
-        }
-        token = token.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
-    } catch (error) {
-        return res.status(401).json({ error: "Nieprawidłowy token autoryzacyjny" });
-    }
-}
+	try {
+		let token = req.headers.authorization;
+		if (!token || !token.startsWith("Bearer ")) {
+			return next(createHttpError(401, "Brak tokenu autoryzacyjnego"));
+		}
+		token = token.split(" ")[1];
+		const decoded = jwt.verify(token, process.env.JWT_SECRET);
+		req.user = decoded;
+		next();
+	} catch {
+		return next(createHttpError(401, "Nieprawidłowy token autoryzacyjny"));
+	}
+};
 
 export const authorize = (roles) => {
-    return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
-            return res.status(403).json({ error: "Brak uprawnień do wykonania tej akcji" });
-        }
-        next();
-    }
-}
+	return (req, res, next) => {
+		if (!roles.includes(req.user.role)) {
+			return next(createHttpError(403, "Brak uprawnień do wykonania tej akcji"));
+		}
+		next();
+	};
+};

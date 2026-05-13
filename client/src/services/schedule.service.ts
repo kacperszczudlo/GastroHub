@@ -1,32 +1,41 @@
 import apiService from './api.service';
+import type { Schedule } from '../types';
+import { getAxiosErrorPayload } from '../utils/errors';
 
 class ScheduleService {
-  async getByWaiter(waiterEmail: string): Promise<any[]> {
+  async getByWaiter(waiterEmail: string): Promise<Schedule[]> {
     try {
       const response = await apiService.getClient().get(`/schedules/waiter?waiter=${waiterEmail}`);
       return response.data?.schedules || [];
     } catch (error) {
-      console.error('Error fetching schedule:', error);
+      const { status } = getAxiosErrorPayload(error);
+      if (status >= 500 || status === 0) console.error('Error fetching schedule:', error);
       throw error;
     }
   }
 
-  async getAll(): Promise<any[]> {
+  async getAll(): Promise<Schedule[]> {
     try {
       const response = await apiService.getClient().get('/schedules');
       return response.data?.schedules || [];
     } catch (error) {
-      console.error('Error fetching all schedules:', error);
+      const { status } = getAxiosErrorPayload(error);
+      if (status >= 500 || status === 0) console.error('Error fetching all schedules:', error);
       throw error;
     }
   }
 
-  async create(schedule: { waiter: string; date: string; shift: 'morning' | 'afternoon' | 'evening' }): Promise<any> {
+  async create(schedule: {
+    waiter: string;
+    date: string;
+    shift: 'morning' | 'afternoon' | 'evening';
+  }): Promise<Schedule> {
     try {
       const response = await apiService.getClient().post('/schedules', schedule);
       return response.data?.data || response.data;
     } catch (error) {
-      console.error('Error creating schedule:', error);
+      const { status } = getAxiosErrorPayload(error);
+      if (status >= 500 || status === 0) console.error('Error creating schedule:', error);
       throw error;
     }
   }
@@ -35,17 +44,22 @@ class ScheduleService {
     try {
       await apiService.getClient().delete(`/schedules/${id}`);
     } catch (error) {
-      console.error('Error deleting schedule:', error);
+      const { status } = getAxiosErrorPayload(error);
+      if (status >= 500 || status === 0) console.error('Error deleting schedule:', error);
       throw error;
     }
   }
 
-  async update(id: string, payload: Partial<{ status: string; shift: string; date: string }>): Promise<any> {
+  async update(
+    id: string,
+    payload: Partial<{ status: string; shift: string; date: string }>,
+  ): Promise<Schedule> {
     try {
       const response = await apiService.getClient().put(`/schedules/${id}`, payload);
       return response.data?.data || response.data;
     } catch (error) {
-      console.error('Error updating schedule:', error);
+      const { status } = getAxiosErrorPayload(error);
+      if (status >= 500 || status === 0) console.error('Error updating schedule:', error);
       throw error;
     }
   }

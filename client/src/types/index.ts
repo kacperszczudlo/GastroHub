@@ -1,30 +1,26 @@
-// Rola użytkownika w systemie
 export type UserRole = 'client' | 'waiter' | 'admin' | null;
 
-// Widok/strona w systemie
-export type ViewType = 
-  | 'menu' 
-  | 'reservation' 
-  | 'client_reservations' 
-  | 'floor' 
-  | 'pos' 
-  | 'schedule' 
-  | 'admin_dashboard' 
-  | 'admin_reservations' 
+export type ViewType =
+  | 'menu'
+  | 'reservation'
+  | 'client_reservations'
+  | 'floor'
+  | 'pos'
+  | 'schedule'
+  | 'admin_dashboard'
+  | 'admin_reservations'
   | 'admin_menu';
 
-// Status stolika
 export type TableStatus = 'free' | 'occupied' | 'reserved';
 
-// Status rezerwacji
-// - pending: czeka na decyzję admina
-// - accepted: zaakceptowana, klient jeszcze nie przybył
-// - active: klient już przybył (kelner zrobił check-in)
-// - completed: rezerwacja zrealizowana (po opłaceniu zamówienia)
-// - rejected/cancelled: odrzucona/anulowana
-export type ReservationStatus = 'pending' | 'accepted' | 'active' | 'completed' | 'rejected' | 'cancelled';
+export type ReservationStatus =
+  | 'pending'
+  | 'accepted'
+  | 'active'
+  | 'completed'
+  | 'rejected'
+  | 'cancelled';
 
-// Interfejs Menu Item
 export interface MenuItem {
   id: string;
   name: string;
@@ -34,7 +30,6 @@ export interface MenuItem {
   desc: string;
 }
 
-// Interfejs Stolika
 export interface Table {
   id: string;
   number: number;
@@ -46,7 +41,6 @@ export interface Table {
   orderId?: string | null;
 }
 
-// Interfejs Rezerwacji
 export interface Reservation {
   id: string;
   date: string;
@@ -57,7 +51,6 @@ export interface Reservation {
   clientName: string;
 }
 
-// Interfejs Grafiku Pracy
 export interface Schedule {
   id: string;
   _id?: string;
@@ -66,7 +59,38 @@ export interface Schedule {
   waiter: string;
 }
 
-// Zamówienie w POS (koszyk)
 export interface OrderItem extends MenuItem {
   qty: number;
+}
+
+export type OpenOrderMenuRef =
+  | string
+  | {
+      _id?: string;
+      name?: string;
+      category?: string;
+      price?: number;
+      image?: string;
+      description?: string;
+    };
+
+export interface OpenOrderLineItem {
+  menuItemId?: OpenOrderMenuRef;
+  name?: string;
+  price?: number;
+  image?: string;
+  desc?: string;
+  quantity?: number;
+}
+
+export type OpenOrderTableId =
+  | string
+  | number
+  | { _id?: string | { toString(): string }; id?: string };
+
+export interface OpenOrder {
+  _id?: string;
+  id?: string;
+  tableId?: OpenOrderTableId;
+  items?: OpenOrderLineItem[];
 }

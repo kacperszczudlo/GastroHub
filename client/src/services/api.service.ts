@@ -13,7 +13,6 @@ class ApiService {
       }
     });
 
-    // Interceptor do dodawania tokenu, jeśli mamy autentykację
     this.api.interceptors.request.use((config) => {
       if (this.authToken) {
         config.headers.Authorization = `Bearer ${this.authToken}`;
@@ -21,7 +20,6 @@ class ApiService {
       return config;
     });
 
-    // Interceptor do obsługi błędów
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {

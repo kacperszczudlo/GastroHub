@@ -1,5 +1,5 @@
 import apiService from './api.service';
-import { Table } from '../types';
+import type { Table } from '../types';
 import { TableModel } from '../models';
 
 class TableService {
@@ -7,7 +7,7 @@ class TableService {
     try {
       const response = await apiService.getClient().get('/tables');
       const tables = Array.isArray(response.data) ? response.data : (response.data.tables || []);
-      return tables.map((item: any) => TableModel.fromAPI(item));
+      return tables.map((item: unknown) => TableModel.fromAPI(item));
     } catch (error) {
       console.error('Error fetching tables:', error);
       throw error;
@@ -53,7 +53,6 @@ class TableService {
     }
   }
 
-  // Admin: aktualizacja pozycji na mapie
   async updatePosition(id: string, x: number, y: number): Promise<Table> {
     try {
       const response = await apiService.getClient().put(`/tables/${id}/`, { x, y });
@@ -64,7 +63,6 @@ class TableService {
     }
   }
 
-  // Przypisanie kelnera do stolika
   async assignWaiter(id: string, waiter: string | null): Promise<Table> {
     try {
       const response = await apiService.getClient().post(`/tables/${id}/assign`, { waiter });

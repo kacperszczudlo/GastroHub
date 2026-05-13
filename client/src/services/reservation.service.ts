@@ -1,6 +1,14 @@
 import apiService from './api.service';
-import { Reservation } from '../types';
+import type { Reservation } from '../types';
 import { ReservationModel } from '../models';
+import { getAxiosErrorPayload } from '../utils/errors';
+
+function asObject(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
 
 class ReservationService {
   async getAll(): Promise<Reservation[]> {
@@ -9,7 +17,7 @@ class ReservationService {
       const reservations = Array.isArray(response.data)
         ? response.data
         : (response.data.reservations || []);
-      return reservations.map((item: any) => ReservationModel.fromAPI(item));
+      return reservations.map((item: unknown) => ReservationModel.fromAPI(item));
     } catch (error) {
       console.error('Error fetching reservations:', error);
       throw error;
@@ -22,7 +30,7 @@ class ReservationService {
       const reservations = Array.isArray(response.data)
         ? response.data
         : (response.data.reservations || []);
-      return reservations.map((item: any) => ReservationModel.fromAPI(item));
+      return reservations.map((item: unknown) => ReservationModel.fromAPI(item));
     } catch (error) {
       console.error('Error fetching own reservations:', error);
       throw error;
@@ -34,15 +42,15 @@ class ReservationService {
       const response = await apiService
         .getClient()
         .post('/reservations', ReservationModel.toAPI(reservation as Reservation));
-      const rawReservation = response.data?.data || response.data;
+      const rawReservation: unknown = response.data?.data || response.data;
 
       try {
         return ReservationModel.fromAPI(rawReservation);
       } catch (mappingError) {
-        // Reservation is already persisted on backend - fallback prevents false "send failed" UI.
         console.warn('Reservation created but response mapping failed:', mappingError);
+        const r = asObject(rawReservation);
         return {
-          id: (rawReservation?.id || rawReservation?._id || `temp-${Date.now()}`).toString(),
+          id: String(r.id ?? r._id ?? `temp-${Date.now()}`),
           date: reservation.date,
           time: reservation.time,
           guests: reservation.guests,
@@ -89,17 +97,14 @@ class ReservationService {
       const response = await apiService.getClient().patch(`/reservations/${id}`, payload);
       return ReservationModel.fromAPI(response.data.data || response.data);
     } catch (error) {
-      // When accepting "last-minute" reservations, backend can update state but the
-      // client may still observe a transient 404 (race with read-model refresh).
-      // Keep behavior strict for other failures.
-      const status = Number((error as any)?.response?.status || 0);
+      const status = getAxiosErrorPayload(error).status;
       if (status === 404) {
         try {
           const refreshed = await this.getAll();
           const found = refreshed.find(item => item.id === id);
           if (found) return found;
         } catch {
-          // Ignore refresh errors and throw original below.
+          void 0;
         }
       }
 
@@ -108,7 +113,6 @@ class ReservationService {
     }
   }
 
-  // Mark an accepted reservation as "klient przybył" (active).
   async checkIn(id: string): Promise<Reservation> {
     try {
       const response = await apiService.getClient().post(`/reservations/${id}/check-in`);
@@ -119,8 +123,6 @@ class ReservationService {
     }
   }
 
-  // Manually finish an "active" reservation - frees the table without
-  // requiring a paid order (e.g. customer left without ordering).
   async complete(id: string): Promise<Reservation> {
     try {
       const response = await apiService.getClient().post(`/reservations/${id}/complete`);

@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Minus, Trash2, CheckCircle, RefreshCw } from 'lucide-react';
-import { OrderItem, MenuItem } from '../../types';
-import { useApp } from '../../context/AppContext';
+import type { MenuItem, OpenOrderLineItem, OrderItem } from '../../types';
+import { useMenuData, useTables } from '../../context';
 import menuService from '../../services/menu.service';
 import tableService from '../../services/table.service';
 import orderService from '../../services/order.service';
+import { getAxiosErrorPayload } from '../../utils/errors';
 
 export function WaiterPOS() {
-  const { menu, setMenu, tables, setTables, selectedTable, setSelectedTable } = useApp();
+  const { menu, setMenu } = useMenuData();
+  const { tables, setTables, setSelectedTable } = useTables();
   const [order, setOrder] = useState<OrderItem[]>([]);
   const [selectedTableId, setSelectedTableId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function WaiterPOS() {
           setMenu([]);
           setTables([]);
           setSelectedTableId('');
-          setError('❌ Nie udało się pobrać danych z backendu. Sprawdź czy serwer API działa.');
+          setError('Nie udało się pobrać danych z backendu. Sprawdź czy serwer API działa.');
           console.error('Błąd pobierania danych POS:', err);
         }
       } finally {
@@ -71,15 +73,20 @@ export function WaiterPOS() {
           return;
         }
 
-        const mappedItems = (existing.items || []).map((item: any) => ({
-          id: item.menuItemId?._id?.toString?.() || item.menuItemId?.toString?.() || item.menuItemId,
-          name: item.menuItemId?.name || item.name || 'Pozycja menu',
-          category: item.menuItemId?.category || 'Menu',
-          price: Number(item.menuItemId?.price || item.price || 0),
-          image: item.menuItemId?.image || item.image || '',
-          desc: item.menuItemId?.description || item.desc || '',
-          qty: item.quantity
-        }));
+        const mappedItems = (existing.items || []).map((line: OpenOrderLineItem) => {
+          const mid = line.menuItemId;
+          const pop = typeof mid === 'object' && mid !== null ? mid : undefined;
+          const idRaw = pop?._id ?? (typeof mid === 'string' || typeof mid === 'number' ? mid : '');
+          return {
+            id: idRaw !== '' && idRaw != null ? String(idRaw) : '',
+            name: pop?.name || line.name || 'Pozycja menu',
+            category: pop?.category || 'Menu',
+            price: Number(pop?.price ?? line.price ?? 0),
+            image: pop?.image || line.image || '',
+            desc: pop?.description || line.desc || '',
+            qty: Number(line.quantity ?? 0),
+          } satisfies OrderItem;
+        });
 
         setOrder(mappedItems);
       } catch {
@@ -153,6 +160,10 @@ export function WaiterPOS() {
 
       if (existingOrder) {
         const existingId = existingOrder._id || existingOrder.id;
+        if (!existingId) {
+          setError('Nie można zaktualizować zamówienia: brak identyfikatora po stronie serwera.');
+          return;
+        }
         console.log('Aktualizuję istniejące zamówienie:', existingId);
         await orderService.updateOrderItems(existingId, { items, waiter });
       } else {
@@ -161,10 +172,10 @@ export function WaiterPOS() {
       }
       setError('');
       await refreshTables();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Błąd podczas zapisywania zamówienia:', err);
-      console.error('Szczegóły błędu:', err.response?.data || err.message);
-      setError(`Błąd: ${err.response?.data?.error || err.response?.data?.details || err.message || 'Nieznany błąd'}`);
+      const { error, details, message } = getAxiosErrorPayload(err);
+      setError(`Błąd: ${details || error || message || 'Nieznany błąd'}`);
     }
   };
 
@@ -179,9 +190,9 @@ export function WaiterPOS() {
       const activeOrderId = activeOrder?._id || activeOrder?.id || localSelectedTable?.orderId;
 
       if (activeOrderId) {
-        console.log('💳 Completing order:', activeOrderId);
+        console.log('Completing order:', activeOrderId);
         await orderService.completeOrder(activeOrderId);
-        console.log('✅ Order paid successfully');
+        console.log('Order paid successfully');
       }
       setOrder([]);
       if (selectedTableId) {
@@ -190,16 +201,15 @@ export function WaiterPOS() {
       }
       setError('');
       await refreshTables();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Błąd podczas finalizacji płatności:', err);
-      console.error('Szczegóły błędu:', err.response?.data || err.message);
-      setError(`Błąd: ${err.response?.data?.error || err.message || 'Nie udało się zakończyć zamówienia w backendzie.'}`);
+      const { error, message } = getAxiosErrorPayload(err);
+      setError(`Błąd: ${error || message || 'Nie udało się zakończyć zamówienia w backendzie.'}`);
     }
   };
 
   return (
     <div className="flex h-[calc(100vh-120px)] bg-gray-200">
-      {/* Koszyk */}
       <div className="w-1/3 bg-white flex flex-col shadow-2xl z-10 border-r border-gray-300">
         <div className="bg-orange-400 text-white p-4 flex flex-col gap-2">
           <div>
@@ -294,9 +304,7 @@ export function WaiterPOS() {
         </div>
       </div>
 
-      {/* Menu */}
       <div className="w-2/3 p-4 overflow-y-auto">
-        {/* Dynamiczne kategorie */}
         <div className="mb-6">
           <div className="flex flex-wrap gap-2">
             <button
@@ -328,7 +336,6 @@ export function WaiterPOS() {
           </div>
         </div>
 
-        {/* Menu Items */}
         <div className="grid grid-cols-3 gap-4">
           {menu
             .filter(item => !selectedCategory || item.category === selectedCategory)

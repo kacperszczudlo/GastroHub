@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { CalendarDays, Plus, Minus, Trash2 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useSchedule } from '../../context';
 import { useAuth } from '../../context/AuthContext';
-import { Schedule } from '../../types';
+import type { Schedule, UserRole } from '../../types';
 import { SHIFTS } from '../../constants';
 import authService from '../../services/auth.service';
 import scheduleService from '../../services/schedule.service';
+import { getAxiosErrorPayload } from '../../utils/errors';
 
 interface ScheduleViewProps {
-  role: string | null;
+  role: UserRole;
 }
 
 interface Waiter {
@@ -17,14 +18,13 @@ interface Waiter {
 }
 
 export function ScheduleView({ role }: ScheduleViewProps) {
-  const { schedule, setSchedule } = useApp();
+  const { schedule, setSchedule } = useSchedule();
   const { email: currentUserEmail } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [waiters, setWaiters] = useState<Waiter[]>([]);
   const [loadingWaiters, setLoadingWaiters] = useState(false);
 
-  // Pobierz schedules z backendu przy mountowaniu
   useEffect(() => {
     const loadSchedules = async () => {
       try {
@@ -43,7 +43,6 @@ export function ScheduleView({ role }: ScheduleViewProps) {
   }, [role, currentUserEmail, setSchedule]);
 
   useEffect(() => {
-    // Pobierz listę kelnerów z API
     if (role === 'admin') {
       setLoadingWaiters(true);
       authService.getWaiters()
@@ -59,7 +58,7 @@ export function ScheduleView({ role }: ScheduleViewProps) {
     }
   }, [role]);
 
-  const handleAddSchedule = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddSchedule = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     
@@ -80,16 +79,16 @@ export function ScheduleView({ role }: ScheduleViewProps) {
 
       await scheduleService.create(newSchedule);
       
-      // Przeładuj harmonogramy z backendu
       const updated = role === 'admin' 
         ? await scheduleService.getAll()
         : await scheduleService.getByWaiter(newSchedule.waiter);
       
       setSchedule(updated);
       setShowForm(false);
-    } catch (err: any) {
-      console.error('Błąd dodawania grafiku:', err);
-      setError(err.response?.data?.error || 'Nie udało się dodać grafiku');
+    } catch (err) {
+      const { error, details, status } = getAxiosErrorPayload(err);
+      if (status >= 500 || status === 0) console.error('Błąd dodawania grafiku:', err);
+      setError(details || error || 'Nie udało się dodać grafiku');
     }
   };
 
@@ -98,23 +97,20 @@ export function ScheduleView({ role }: ScheduleViewProps) {
     return shift?.label || shiftKey;
   };
 
-  const handleDelete = async (idOrMaybeObj: string | any) => {
+  const handleDelete = async (id: string) => {
     try {
-      const id = typeof idOrMaybeObj === 'string'
-        ? idOrMaybeObj
-        : (idOrMaybeObj?._id || idOrMaybeObj?.id);
       if (!id) throw new Error('Brak id grafiku');
       await scheduleService.delete(id);
       
-      // Przeładuj harmonogramy z backendu
       const updated = role === 'admin'
         ? await scheduleService.getAll()
         : await scheduleService.getByWaiter(currentUserEmail || '');
       
       setSchedule(updated);
-    } catch (err: any) {
-      console.error('Błąd usuwania grafiku:', err);
-      setError(err.response?.data?.error || 'Nie udało się usunąć grafiku');
+    } catch (err) {
+      const { error, details, status } = getAxiosErrorPayload(err);
+      if (status >= 500 || status === 0) console.error('Błąd usuwania grafiku:', err);
+      setError(details || error || 'Nie udało się usunąć grafiku');
     }
   };
 

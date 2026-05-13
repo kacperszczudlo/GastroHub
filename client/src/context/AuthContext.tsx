@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { UserRole } from '../types';
 import authService from '../services/auth.service';
 import apiService from '../services/api.service';
@@ -32,7 +32,7 @@ const decodeJwtPayload = (token: string): { role?: UserRole; email?: string } =>
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole>(null);
   const [email, setEmail] = useState<string | null>(null);
 

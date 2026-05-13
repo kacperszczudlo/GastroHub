@@ -1,11 +1,11 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Utensils, LogOut, MapPin, Phone } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
+import { useNavigation } from '../../context';
 
 export function Header() {
   const { role, logout } = useAuth();
-  const { currentView, setCurrentView } = useApp();
+  const { currentView, setCurrentView } = useNavigation();
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -48,7 +48,6 @@ export function Header() {
         </div>
       </div>
 
-      {/* Navigation bars */}
       {role === 'client' && (
         <nav className="bg-gray-50 border-b flex justify-center gap-8 py-3 overflow-x-auto px-4">
           <NavButton
@@ -137,7 +136,7 @@ export function Header() {
 interface NavButtonProps {
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
   theme?: 'light' | 'dark';
 }
 

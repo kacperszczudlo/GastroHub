@@ -1,5 +1,5 @@
 import apiService from './api.service';
-import type { OrderItem } from '../types';
+import type { OpenOrder, OrderItem } from '../types';
 
 type OrderPayload = {
   tableId: string | null;
@@ -8,7 +8,7 @@ type OrderPayload = {
 };
 
 class OrderService {
-  async createOpenOrder(payload: OrderPayload): Promise<any> {
+  async createOpenOrder(payload: OrderPayload): Promise<OpenOrder> {
     try {
       const response = await apiService.getClient().post('/orders', payload);
       return response.data?.data || response.data;
@@ -18,7 +18,7 @@ class OrderService {
     }
   }
 
-  async getOpenOrders(): Promise<any[]> {
+  async getOpenOrders(): Promise<OpenOrder[]> {
     try {
       const response = await apiService.getClient().get('/orders/status/open');
       return response.data?.orders || [];
@@ -28,10 +28,10 @@ class OrderService {
     }
   }
 
-  async getOpenOrderByTable(tableId: string): Promise<any | null> {
+  async getOpenOrderByTable(tableId: string): Promise<OpenOrder | null> {
     try {
       const response = await apiService.getClient().get('/orders/open', {
-        params: { tableId }
+        params: { tableId },
       });
       return response.data?.data || null;
     } catch (error) {
@@ -40,7 +40,10 @@ class OrderService {
     }
   }
 
-  async updateOrderItems(orderId: string, payload: { items: Array<{ menuItemId: string; quantity: number }>; waiter?: string | null }): Promise<any> {
+  async updateOrderItems(
+    orderId: string,
+    payload: { items: Array<{ menuItemId: string; quantity: number }>; waiter?: string | null },
+  ): Promise<OpenOrder> {
     try {
       const response = await apiService.getClient().put(`/orders/${orderId}/items`, payload);
       return response.data?.data || response.data;
@@ -50,7 +53,7 @@ class OrderService {
     }
   }
 
-  async completeOrder(orderId: string): Promise<any> {
+  async completeOrder(orderId: string): Promise<OpenOrder> {
     try {
       const response = await apiService.getClient().post(`/orders/${orderId}/complete`);
       return response.data?.data || response.data;
@@ -61,9 +64,9 @@ class OrderService {
   }
 
   mapToPayload(items: OrderItem[]) {
-    return items.map(item => ({
+    return items.map((item) => ({
       menuItemId: item.id,
-      quantity: item.qty
+      quantity: item.qty,
     }));
   }
 }

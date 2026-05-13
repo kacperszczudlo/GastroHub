@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type DragEvent } from 'react';
 import { Users } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
-import { Table } from '../../types';
+import { useReservations, useTables } from '../../context';
+import type { OpenOrder, Table } from '../../types';
 import tableService from '../../services/table.service';
 import orderService from '../../services/order.service';
 import reservationService from '../../services/reservation.service';
@@ -11,16 +11,14 @@ interface FloorPlanProps {
 }
 
 export function FloorPlan({ editable = false }: FloorPlanProps) {
-  const { tables, setTables, setSelectedTable, setReservations } = useApp();
+  const { tables, setTables, setSelectedTable } = useTables();
+  const { setReservations } = useReservations();
   const [localTables, setLocalTables] = useState<Table[]>(tables);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState(editable);
   const [error, setError] = useState('');
-  const [openOrders, setOpenOrders] = useState<any[]>([]);
+  const [openOrders, setOpenOrders] = useState<OpenOrder[]>([]);
 
-  // Fetch tables (and reservations - needed for the table modal & status hints)
-  // on mount and on a short interval so the floor plan reflects check-ins,
-  // newly opened orders, etc.
   useEffect(() => {
     let mounted = true;
 
@@ -38,14 +36,13 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
       } catch (err) {
         if (!mounted) return;
         console.error('Błąd pobierania stolików:', err);
-        setError('❌ Nie udało się pobrać danych stolików. Sprawdź czy serwer API działa.');
+        setError('Nie udało się pobrać danych stolików. Sprawdź czy serwer API działa.');
         setTables([]);
         setLocalTables([]);
       }
     };
 
     fetchAll();
-    // refresh every 30s so "reserved" window kicks in / out automatically
     const interval = setInterval(fetchAll, 30000);
 
     return () => {
@@ -54,12 +51,10 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
     };
   }, [setTables, setReservations]);
 
-  // Sync localTables with tables from context when they change
   useEffect(() => {
     setLocalTables(tables);
   }, [tables]);
 
-  // Pobierz otwarte zamówienia co 5 sekund
   useEffect(() => {
     let mounted = true;
 
@@ -83,7 +78,7 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
     };
   }, []);
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {
+  const handleDragStart = (e: DragEvent<HTMLDivElement>, id: string) => {
     if (!dragMode) return;
     setDraggingId(id);
     const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -92,7 +87,7 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
     e.dataTransfer!.setData('id', id.toString());
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     if (!dragMode) return;
     e.preventDefault();
     const id = e.dataTransfer!.getData('id');
@@ -115,11 +110,10 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
       if (changed) {
         tableService.updatePosition(id, changed.x, changed.y)
           .then(() => {
-            console.log('✅ Pozycja zapisana w bazie');
+            console.log('Pozycja zapisana w bazie');
           })
           .catch((err) => {
-            console.error('❌ Błąd zapisywania pozycji:', err);
-            // Pobierz świeże dane ze servera aby cofnąć zmianę
+            console.error('Błąd zapisywania pozycji:', err);
             tableService.getAll()
               .then(fresh => {
                 setLocalTables(fresh);
@@ -169,7 +163,7 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
                   : 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600'
               }`}
             >
-              {dragMode ? '↓ Przełącz na Zarządzanie' : '✏️ Przełącz na Edycję Układu'}
+              {dragMode ? 'Przełącz na zarządzanie' : 'Przełącz na edycję układu'}
             </button>
           )}
         </h2>
@@ -200,10 +194,6 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
         onDrop={handleDrop}
       >
         {localTables.map(table => {
-          // Find the open order for this table tolerantly: tableId from
-          // the API may be either a populated object {_id, ...} or a raw
-          // ObjectId string, and either side may be a Mongo ObjectId
-          // instance that needs toString() before comparison.
           const tableIdStr = String(table.id);
           const orderForTable = openOrders.find(o => {
             const raw = o?.tableId;

@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Plus, Edit3, Trash2, XCircle } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useMenuData } from '../../context';
 import { useUiFeedback } from '../../context/UiFeedbackContext';
-import { MenuItem } from '../../types';
+import type { MenuItem } from '../../types';
 import menuService from '../../services/menu.service';
 import axios from 'axios';
 
 export function AdminMenuManager() {
-  const { menu, setMenu } = useApp();
+  const { menu, setMenu } = useMenuData();
   const { showSuccess, showError } = useUiFeedback();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -27,7 +27,7 @@ export function AdminMenuManager() {
       } catch (err) {
         if (mounted) {
           console.error('Błąd pobierania menu:', err);
-          setError('❌ Nie udało się pobrać menu. Sprawdź czy serwer API działa.');
+          setError('Nie udało się pobrać menu. Sprawdź czy serwer API działa.');
         }
       }
     };
@@ -94,7 +94,7 @@ export function AdminMenuManager() {
       img.src = objectUrl;
     });
 
-  const handleSaveForm = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveForm = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const imageFile = formData.get('imageFile');
@@ -213,7 +213,6 @@ export function AdminMenuManager() {
         </table>
       </div>
 
-      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md relative">
