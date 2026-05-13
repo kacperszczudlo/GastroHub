@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Plus, Minus, Trash2, CheckCircle, RefreshCw } from 'lucide-react';
 import type { MenuItem, OpenOrderLineItem, OrderItem } from '../../types';
-import { useApp } from '../../context/AppContext';
+import { useMenuData, useTables } from '../../context';
 import menuService from '../../services/menu.service';
 import tableService from '../../services/table.service';
 import orderService from '../../services/order.service';
 import { getAxiosErrorPayload } from '../../utils/errors';
 
 export function WaiterPOS() {
-  const { menu, setMenu, tables, setTables, setSelectedTable } = useApp();
+  const { menu, setMenu } = useMenuData();
+  const { tables, setTables, setSelectedTable } = useTables();
   const [order, setOrder] = useState<OrderItem[]>([]);
   const [selectedTableId, setSelectedTableId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export function WaiterPOS() {
           setMenu([]);
           setTables([]);
           setSelectedTableId('');
-          setError('❌ Nie udało się pobrać danych z backendu. Sprawdź czy serwer API działa.');
+          setError('Nie udało się pobrać danych z backendu. Sprawdź czy serwer API działa.');
           console.error('Błąd pobierania danych POS:', err);
         }
       } finally {
@@ -189,9 +190,9 @@ export function WaiterPOS() {
       const activeOrderId = activeOrder?._id || activeOrder?.id || localSelectedTable?.orderId;
 
       if (activeOrderId) {
-        console.log('💳 Completing order:', activeOrderId);
+        console.log('Completing order:', activeOrderId);
         await orderService.completeOrder(activeOrderId);
-        console.log('✅ Order paid successfully');
+        console.log('Order paid successfully');
       }
       setOrder([]);
       if (selectedTableId) {
@@ -209,7 +210,6 @@ export function WaiterPOS() {
 
   return (
     <div className="flex h-[calc(100vh-120px)] bg-gray-200">
-      {/* Koszyk */}
       <div className="w-1/3 bg-white flex flex-col shadow-2xl z-10 border-r border-gray-300">
         <div className="bg-orange-400 text-white p-4 flex flex-col gap-2">
           <div>
@@ -304,9 +304,7 @@ export function WaiterPOS() {
         </div>
       </div>
 
-      {/* Menu */}
       <div className="w-2/3 p-4 overflow-y-auto">
-        {/* Dynamiczne kategorie */}
         <div className="mb-6">
           <div className="flex flex-wrap gap-2">
             <button
@@ -338,7 +336,6 @@ export function WaiterPOS() {
           </div>
         </div>
 
-        {/* Menu Items */}
         <div className="grid grid-cols-3 gap-4">
           {menu
             .filter(item => !selectedCategory || item.category === selectedCategory)

@@ -13,7 +13,6 @@ export type ViewType =
 
 export type TableStatus = 'free' | 'occupied' | 'reserved';
 
-/** pending → awaiting staff; accepted → confirmed; active → guest seated; completed → finished; rejected/cancelled → closed without service */
 export type ReservationStatus =
   | 'pending'
   | 'accepted'
@@ -64,7 +63,6 @@ export interface OrderItem extends MenuItem {
   qty: number;
 }
 
-/** Menu reference as returned on embedded order lines */
 export type OpenOrderMenuRef =
   | string
   | {
@@ -90,7 +88,6 @@ export type OpenOrderTableId =
   | number
   | { _id?: string | { toString(): string }; id?: string };
 
-/** Open order document from `/orders` API */
 export interface OpenOrder {
   _id?: string;
   id?: string;

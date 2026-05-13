@@ -9,7 +9,6 @@ const startServer = async () => {
     try {
         await connectDB();
         
-        // Seed demo users only if SEED_DEMO_USERS env var is set to 'true'
         if (process.env.SEED_DEMO_USERS === 'true') {
             await seedDemoUsers();
             console.log('Demo users seeded');
@@ -17,9 +16,7 @@ const startServer = async () => {
 
         app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
-            // Schedule daily prune of old cancelled reservations (runs every 24h)
             const MS_PER_DAY = 24 * 60 * 60 * 1000;
-            // run first prune 30 seconds after start to clean up any dev data
             setTimeout(() => {
                 pruneReservations().then(res => console.log('[Prune] ', res.message)).catch(err => console.error('[Prune] error', err));
                 setInterval(() => {

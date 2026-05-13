@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { Utensils, LogOut, MapPin, Phone } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
+import { useNavigation } from '../../context';
 
 export function Header() {
   const { role, logout } = useAuth();
-  const { currentView, setCurrentView } = useApp();
+  const { currentView, setCurrentView } = useNavigation();
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">

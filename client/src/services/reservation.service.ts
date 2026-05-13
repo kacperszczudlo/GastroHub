@@ -47,7 +47,6 @@ class ReservationService {
       try {
         return ReservationModel.fromAPI(rawReservation);
       } catch (mappingError) {
-        // Reservation is already persisted on backend - fallback prevents false "send failed" UI.
         console.warn('Reservation created but response mapping failed:', mappingError);
         const r = asObject(rawReservation);
         return {
@@ -98,9 +97,6 @@ class ReservationService {
       const response = await apiService.getClient().patch(`/reservations/${id}`, payload);
       return ReservationModel.fromAPI(response.data.data || response.data);
     } catch (error) {
-      // When accepting "last-minute" reservations, backend can update state but the
-      // client may still observe a transient 404 (race with read-model refresh).
-      // Keep behavior strict for other failures.
       const status = getAxiosErrorPayload(error).status;
       if (status === 404) {
         try {
@@ -108,7 +104,7 @@ class ReservationService {
           const found = refreshed.find(item => item.id === id);
           if (found) return found;
         } catch {
-          // Ignore refresh errors and throw original below.
+          void 0;
         }
       }
 
@@ -117,7 +113,6 @@ class ReservationService {
     }
   }
 
-  // Mark an accepted reservation as "klient przybył" (active).
   async checkIn(id: string): Promise<Reservation> {
     try {
       const response = await apiService.getClient().post(`/reservations/${id}/check-in`);
@@ -128,8 +123,6 @@ class ReservationService {
     }
   }
 
-  // Manually finish an "active" reservation - frees the table without
-  // requiring a paid order (e.g. customer left without ordering).
   async complete(id: string): Promise<Reservation> {
     try {
       const response = await apiService.getClient().post(`/reservations/${id}/complete`);

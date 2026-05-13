@@ -6,6 +6,7 @@ import reservationRoutes from './modules/reservation/reservation.routes.js';
 import tableRoutes from './modules/table/table.routes.js';
 import orderRoutes from './modules/order/order.routes.js';
 import scheduleRoutes from './modules/schedule/schedule.routes.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
@@ -23,5 +24,7 @@ app.use('/api/schedules', scheduleRoutes);
 app.get('/', (req, res) => {
   res.send('GastroHub API is running');
 });
+
+app.use(errorHandler);
 
 export default app;

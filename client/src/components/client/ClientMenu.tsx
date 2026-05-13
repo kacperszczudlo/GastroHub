@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useMenuData } from '../../context';
 import { MenuItem } from '../../types';
 import menuService from '../../services/menu.service';
 
 export function ClientMenu() {
-  const { menu, setMenu } = useApp();
+  const { menu, setMenu } = useMenuData();
   const [activeCat, setActiveCat] = useState<string>('');
   const [error, setError] = useState('');
 
@@ -21,7 +21,7 @@ export function ClientMenu() {
       } catch (err) {
         if (mounted) {
           setMenu([]);
-          setError('❌ Nie udało się pobrać menu. Sprawdź czy serwer API działa.');
+          setError('Nie udało się pobrać menu. Sprawdź czy serwer API działa.');
           console.error('Błąd pobierania menu:', err);
         }
       }

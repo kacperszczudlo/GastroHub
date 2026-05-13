@@ -8,17 +8,17 @@ Celem projektu jest optymalizacja działania restauracji poprzez automatyzację 
 
 ## 3. Zakres funkcjonalny
 
-### 👤 Klient
+### Klient
 * **Menu:** Dostęp do aktualnego menu po zalogowaniu.
 * **Rezerwacje:** Składanie rezerwacji poprzez podanie daty, godziny oraz liczby osób. Automatyczny przydział stolika.
 
-### 🤵 Kelner (User)
+### Kelner (User)
 * **Podgląd sali:** Dostęp do interaktywnego, kafelkowego podglądu sali.
 * **Zarządzanie stolikami:** Oznaczanie na żywo stolików jako zajęte i przypisywanie się do ich obsługi.
 * **System POS:** Składanie zamówień (dodawanie potraw z menu) i podsumowanie kwoty rachunku.
 * **Grafik pracy:** Dostęp do kalendarza w celu zaznaczania swojej obecności.
 
-### 👑 Administrator (Właściciel)
+### Administrator (Właściciel)
 * **Zarządzanie układem sali:** Ustalanie liczby stolików i ich pojemności.
 * **Zarządzanie menu:** Dodawanie potraw, zmiana cen.
 * **Zarządzanie rezerwacjami:** Ręczne odwoływanie rezerwacji klientów.

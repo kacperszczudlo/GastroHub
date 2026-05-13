@@ -53,7 +53,6 @@ class TableService {
     }
   }
 
-  // Admin: aktualizacja pozycji na mapie
   async updatePosition(id: string, x: number, y: number): Promise<Table> {
     try {
       const response = await apiService.getClient().put(`/tables/${id}/`, { x, y });
@@ -64,7 +63,6 @@ class TableService {
     }
   }
 
-  // Przypisanie kelnera do stolika
   async assignWaiter(id: string, waiter: string | null): Promise<Table> {
     try {
       const response = await apiService.getClient().post(`/tables/${id}/assign`, { waiter });

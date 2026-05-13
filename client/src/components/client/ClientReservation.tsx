@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Calendar } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useReservations } from '../../context';
 import { useAuth } from '../../context/AuthContext';
 import { useUiFeedback } from '../../context/UiFeedbackContext';
 import reservationService from '../../services/reservation.service';
@@ -65,7 +65,7 @@ function TimeDropdown({ name, options }: TimeDropdownProps) {
 }
 
 export function ClientReservation() {
-  const { reservations, setReservations } = useApp();
+  const { reservations, setReservations } = useReservations();
   const { email: currentUserEmail } = useAuth();
   const { showSuccess, showError } = useUiFeedback();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,7 +129,7 @@ export function ClientReservation() {
           return;
         }
       } catch {
-        /* fall through to message below */
+        void 0;
       }
 
       const status = Number(axiosError.response?.status || 0);

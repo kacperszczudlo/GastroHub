@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { CalendarDays, Plus, Minus, Trash2 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useSchedule } from '../../context';
 import { useAuth } from '../../context/AuthContext';
 import type { Schedule, UserRole } from '../../types';
 import { SHIFTS } from '../../constants';
@@ -18,14 +18,13 @@ interface Waiter {
 }
 
 export function ScheduleView({ role }: ScheduleViewProps) {
-  const { schedule, setSchedule } = useApp();
+  const { schedule, setSchedule } = useSchedule();
   const { email: currentUserEmail } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [waiters, setWaiters] = useState<Waiter[]>([]);
   const [loadingWaiters, setLoadingWaiters] = useState(false);
 
-  // Pobierz schedules z backendu przy mountowaniu
   useEffect(() => {
     const loadSchedules = async () => {
       try {
@@ -44,7 +43,6 @@ export function ScheduleView({ role }: ScheduleViewProps) {
   }, [role, currentUserEmail, setSchedule]);
 
   useEffect(() => {
-    // Pobierz listę kelnerów z API
     if (role === 'admin') {
       setLoadingWaiters(true);
       authService.getWaiters()
@@ -81,7 +79,6 @@ export function ScheduleView({ role }: ScheduleViewProps) {
 
       await scheduleService.create(newSchedule);
       
-      // Przeładuj harmonogramy z backendu
       const updated = role === 'admin' 
         ? await scheduleService.getAll()
         : await scheduleService.getByWaiter(newSchedule.waiter);
@@ -89,8 +86,8 @@ export function ScheduleView({ role }: ScheduleViewProps) {
       setSchedule(updated);
       setShowForm(false);
     } catch (err) {
-      console.error('Błąd dodawania grafiku:', err);
-      const { error, details } = getAxiosErrorPayload(err);
+      const { error, details, status } = getAxiosErrorPayload(err);
+      if (status >= 500 || status === 0) console.error('Błąd dodawania grafiku:', err);
       setError(details || error || 'Nie udało się dodać grafiku');
     }
   };
@@ -105,15 +102,14 @@ export function ScheduleView({ role }: ScheduleViewProps) {
       if (!id) throw new Error('Brak id grafiku');
       await scheduleService.delete(id);
       
-      // Przeładuj harmonogramy z backendu
       const updated = role === 'admin'
         ? await scheduleService.getAll()
         : await scheduleService.getByWaiter(currentUserEmail || '');
       
       setSchedule(updated);
     } catch (err) {
-      console.error('Błąd usuwania grafiku:', err);
-      const { error, details } = getAxiosErrorPayload(err);
+      const { error, details, status } = getAxiosErrorPayload(err);
+      if (status >= 500 || status === 0) console.error('Błąd usuwania grafiku:', err);
       setError(details || error || 'Nie udało się usunąć grafiku');
     }
   };

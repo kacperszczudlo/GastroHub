@@ -1,5 +1,5 @@
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AppProvider, useApp } from './context/AppContext';
+import { AppProvider, useNavigation } from './context';
 import { UiFeedbackProvider } from './context/UiFeedbackContext';
 import { Header, LoginScreen } from './components/common';
 import { ClientMenu, ClientReservation, ClientReservationsList } from './components/client';
@@ -8,7 +8,7 @@ import { AdminReservationsManager, AdminMenuManager, ScheduleView } from './comp
 
 function AppContent() {
   const { role } = useAuth();
-  const { currentView } = useApp();
+  const { currentView } = useNavigation();
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">

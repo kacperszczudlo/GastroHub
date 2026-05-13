@@ -15,18 +15,18 @@
 
 ## 2. Podział na role i zakres funkcjonalny
 
-### 👤 Klient
+### Klient
 - Dostęp do aktualnego menu po zalogowaniu
 - Składanie rezerwacji (data, godzina, liczba osób → automatyczny przydział stolika)
 - Podgląd historii własnych rezerwacji
 
-### 🤵 Kelner
+### Kelner
 - Interaktywny podgląd sali (kafelki + statusy stolików)
 - Przypisywanie się do stolika i oznaczanie stolików „z ulicy”
 - System POS – otwieranie rachunku, dodawanie pozycji, zamykanie zamówienia
 - Grafik pracy (deklarowanie dyspozycyjności)
 
-### 👑 Administrator
+### Administrator
 - Zarządzanie menu (CRUD)
 - Konfiguracja układu stolików (liczba, pojemność)
 - Zarządzanie wszystkimi rezerwacjami (m.in. anulowanie)
@@ -46,21 +46,21 @@
 ```mermaid
 flowchart LR
     subgraph " "
-        C("👤 Klient"):::actor
-        K("👤 Kelner"):::actor
-        A("👑 Administrator"):::actor
+        C("Klient"):::actor
+        K("Kelner"):::actor
+        A("Administrator"):::actor
     end
 
     subgraph "System GastroHub"
-        UC1("🔐 Logowanie i Rejestracja")
-        UC2("🍽️ Przeglądanie menu")
-        UC3("📅 Automatyczna rezerwacja stolika")
-        UC4("🪑 Podgląd interaktywnej sali")
-        UC5("💳 Obsługa zamówień POS")
-        UC6("🗓️ Grafik pracy")
-        UC7("📋 Zarządzanie menu CRUD")
-        UC8("🪑 Konfiguracja układu stolików")
-        UC9("❌ Anulowanie rezerwacji")
+        UC1("Logowanie i Rejestracja")
+        UC2("Przeglądanie menu")
+        UC3("Automatyczna rezerwacja stolika")
+        UC4("Podgląd interaktywnej sali")
+        UC5("Obsługa zamówień POS")
+        UC6("Grafik pracy")
+        UC7("Zarządzanie menu CRUD")
+        UC8("Konfiguracja układu stolików")
+        UC9("Anulowanie rezerwacji")
     end
 
     C --> UC1 & UC2 & UC3

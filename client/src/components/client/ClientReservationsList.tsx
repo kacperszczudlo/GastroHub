@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { CalendarDays, Users, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useReservations, useTables } from '../../context';
 import { useAuth } from '../../context/AuthContext';
 import reservationService from '../../services/reservation.service';
 
 export function ClientReservationsList() {
-  const { reservations, setReservations, tables } = useApp();
+  const { reservations, setReservations } = useReservations();
+  const { tables } = useTables();
   const { role } = useAuth();
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export function ClientReservationsList() {
           setReservations(allReservations);
         }
       } catch {
-        // Fallback is intentionally omitted so we only use backend-owned data.
+        void 0;
       }
     };
 

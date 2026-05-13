@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Calendar, Users, XCircle, UserCheck } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useReservations, useTables } from '../../context';
 import { useAuth } from '../../context/AuthContext';
 import { useUiFeedback } from '../../context/UiFeedbackContext';
 import type { Table as TableType, Reservation, UserRole, OpenOrder, OpenOrderLineItem } from '../../types';
@@ -19,8 +19,6 @@ interface Waiter {
   email: string;
 }
 
-// Window (in minutes) before the reservation start when staff can already check-in
-// the client. Should mirror RESERVATION_HOLD_MINUTES on the backend.
 const CHECK_IN_WINDOW_MINUTES = 60;
 
 const buildReservationStart = (reservation: Reservation): Date | null => {
@@ -58,7 +56,8 @@ const formatReservationStatus = (status: Reservation['status']) => {
 };
 
 export function TableModal({ role }: TableModalProps) {
-  const { selectedTable, setSelectedTable, tables, setTables, reservations, setReservations } = useApp();
+  const { selectedTable, setSelectedTable, tables, setTables } = useTables();
+  const { reservations, setReservations } = useReservations();
   const { email: currentUserEmail } = useAuth();
   const { showSuccess, showError } = useUiFeedback();
   const [waiters, setWaiters] = useState<Waiter[]>([]);
@@ -122,8 +121,6 @@ export function TableModal({ role }: TableModalProps) {
       });
   }, [reservations, selectedTable]);
 
-  // Reservation that is closest to "now" and within the check-in window.
-  // Lets the staff click "Klient przybył" without picking from a list.
   const checkInCandidate = useMemo(() => {
     const now = clockMs;
     return tableReservations.find((r) => {
@@ -131,7 +128,6 @@ export function TableModal({ role }: TableModalProps) {
       const start = buildReservationStart(r);
       if (!start) return false;
       const diffMinutes = (start.getTime() - now) / 60000;
-      // Allow a 15 min late grace beyond the start time, plus the upfront window.
       return diffMinutes <= CHECK_IN_WINDOW_MINUTES && diffMinutes >= -15;
     });
   }, [tableReservations, clockMs]);

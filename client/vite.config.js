@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Linux often hits EMFILE with native fs.watch on large trees; polling avoids inotify exhaustion. */
 const isLinux = process.platform === 'linux';
 const watchUsePolling =
   process.env.GASTROHUB_POLL === '1' ||

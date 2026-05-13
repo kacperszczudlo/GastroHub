@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Eye, EyeOff, Utensils } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
+import { useNavigation } from '../../context';
 import { getAxiosErrorPayload } from '../../utils/errors';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -9,7 +9,7 @@ const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).
 
 export function LoginScreen() {
   const { login, register, changePassword } = useAuth();
-  const { setCurrentView } = useApp();
+  const { setCurrentView } = useNavigation();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [isResetMode, setIsResetMode] = useState(false);
   const [loading, setLoading] = useState(false);

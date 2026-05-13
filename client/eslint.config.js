@@ -68,7 +68,7 @@ export default defineConfig([
       ...reactHooksRelax,
       'react-refresh/only-export-components': [
         'error',
-        { allowExportNames: ['useAuth', 'useApp', 'useUiFeedback'] },
+        { allowExportNames: ['useAuth', 'useNavigation', 'useMenuData', 'useTables', 'useReservations', 'useSchedule', 'useUiFeedback'] },
       ],
     },
   },

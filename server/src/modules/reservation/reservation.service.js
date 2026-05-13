@@ -1,18 +1,9 @@
 import Reservation from "./reservation.model.js";
 import Table from "../table/table.model.js";
+import { createHttpError } from "../../common/httpError.js";
 
-const createError = (status, message) => {
-	const error = new Error(message);
-	error.status = status;
-	return error;
-};
-
-// How long before reservation start the table becomes "reserved" (yellow).
 export const RESERVATION_HOLD_MINUTES = 60;
 
-// Build a JS Date by combining a stored reservationDate with HH:MM start time.
-// reservationDate from Mongo is a Date at UTC midnight; we use its UTC Y/M/D
-// and apply local hours from startTime so it represents local restaurant time.
 export const buildReservationStart = (reservationDate, startTime) => {
 	const d = new Date(reservationDate);
 	if (Number.isNaN(d.getTime())) return null;
@@ -30,11 +21,11 @@ export const createReservation = async (payload, user) => {
 	const userId = user?.userId;
 
 	if (!userId) {
-		throw createError(401, "Brak poprawnych danych użytkownika w tokenie");
+		throw createHttpError(401, "Brak poprawnych danych użytkownika w tokenie");
 	}
 
 	if (!reservationDate || !startTime || !endTime || !numberOfGuests) {
-		throw createError(400, "Brakuje wymaganych danych");
+		throw createHttpError(400, "Brakuje wymaganych danych");
 	}
 
 	const newReservation = new Reservation({
@@ -99,18 +90,15 @@ export const updateReservationStatus = async (id, payload) => {
 	const { status } = payload;
 
 	if (!status) {
-		throw createError(400, "Status jest wymagany");
+		throw createHttpError(400, "Status jest wymagany");
 	}
 
 	const reservation = await Reservation.findById(id);
 	if (!reservation) {
-		throw createError(404, "Rezerwacja nie została znaleziona");
+		throw createHttpError(404, "Rezerwacja nie została znaleziona");
 	}
 
 	if (status === "accepted") {
-		// Assign a free table for the requested time window, but DO NOT
-		// permanently mark the table as 'reserved' - the table status is
-		// derived from upcoming reservations + open orders at read time.
 		const table = await findAvailableTable(
 			reservation.numberOfGuests,
 			reservation.reservationDate,
@@ -119,15 +107,14 @@ export const updateReservationStatus = async (id, payload) => {
 		);
 
 		if (!table) {
-			throw createError(404, "Brak dostępnego stolika dla tej rezerwacji");
+			throw createHttpError(404, "Brak dostępnego stolika dla tej rezerwacji");
 		}
 
 		reservation.tableId = table._id;
 		reservation.status = "accepted";
-		console.log(`✅ Reservation ${id} accepted -> table ${table.tableNumber} assigned`);
+		console.log(`Reservation ${id} accepted -> table ${table.tableNumber} assigned`);
 	} else if (status === "rejected" || status === "cancelled") {
 		reservation.status = status;
-		// Detach table; the table's effective status will be recomputed on the next read.
 		reservation.tableId = null;
 	} else {
 		reservation.status = status;
@@ -142,18 +129,18 @@ export const updateReservationStatus = async (id, payload) => {
 export const checkInReservation = async (id, user) => {
 	const reservation = await Reservation.findById(id);
 	if (!reservation) {
-		throw createError(404, "Rezerwacja nie została znaleziona");
+		throw createHttpError(404, "Rezerwacja nie została znaleziona");
 	}
 	if (reservation.status !== "accepted") {
-		throw createError(400, "Tylko zaakceptowana rezerwacja może być oznaczona jako 'klient przybył'");
+		throw createHttpError(400, "Tylko zaakceptowana rezerwacja może być oznaczona jako 'klient przybył'");
 	}
 	if (!reservation.tableId) {
-		throw createError(400, "Rezerwacja nie ma przypisanego stolika");
+		throw createHttpError(400, "Rezerwacja nie ma przypisanego stolika");
 	}
 
 	reservation.status = "active";
 	await reservation.save();
-	console.log(`✅ Reservation ${id} checked in by ${user?.email || "unknown"}`);
+	console.log(`Reservation ${id} checked in by ${user?.email || "unknown"}`);
 
 	const populated = await populateReservation(Reservation.findById(reservation._id));
 	return { message: "Klient został oznaczony jako przybyły", data: populated };
@@ -162,14 +149,14 @@ export const checkInReservation = async (id, user) => {
 export const completeReservation = async (id, user) => {
 	const reservation = await Reservation.findById(id);
 	if (!reservation) {
-		throw createError(404, "Rezerwacja nie została znaleziona");
+		throw createHttpError(404, "Rezerwacja nie została znaleziona");
 	}
 	if (reservation.status !== "active") {
-		throw createError(400, "Tylko rezerwację 'klient na miejscu' można ręcznie zakończyć");
+		throw createHttpError(400, "Tylko rezerwację 'klient na miejscu' można ręcznie zakończyć");
 	}
 	reservation.status = "completed";
 	await reservation.save();
-	console.log(`✅ Reservation ${id} manually completed by ${user?.email || "unknown"}`);
+	console.log(`Reservation ${id} manually completed by ${user?.email || "unknown"}`);
 	const populated = await populateReservation(Reservation.findById(reservation._id));
 	return { message: "Rezerwacja została zakończona", data: populated };
 };
@@ -180,7 +167,7 @@ export const completeActiveReservationForTable = async (tableId) => {
 	if (!reservation) return null;
 	reservation.status = "completed";
 	await reservation.save();
-	console.log(`✅ Active reservation ${reservation._id} on table ${tableId} marked completed`);
+	console.log(`Active reservation ${reservation._id} on table ${tableId} marked completed`);
 	return reservation;
 };
 
@@ -188,7 +175,7 @@ export const cancelReservation = async (id) => {
 	const reservation = await Reservation.findById(id);
 
 	if (!reservation) {
-		throw createError(404, "Rezerwacja nie znaleziona");
+		throw createHttpError(404, "Rezerwacja nie znaleziona");
 	}
 
 	reservation.status = "cancelled";
@@ -202,12 +189,11 @@ export const cancelReservation = async (id) => {
 export const hardDeleteReservation = async (id) => {
 	const reservation = await Reservation.findByIdAndDelete(id);
 	if (!reservation) {
-		throw createError(404, 'Rezerwacja nie znaleziona');
+		throw createHttpError(404, 'Rezerwacja nie znaleziona');
 	}
 	return { message: 'Rezerwacja została trwale usunięta', data: reservation };
 };
 
-// prune cancelled reservations older than `days` days (default 90)
 export const pruneReservations = async (days = 90) => {
 	const cutoff = new Date();
 	cutoff.setDate(cutoff.getDate() - Number(days));

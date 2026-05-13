@@ -1,42 +1,22 @@
 import * as authService from "./auth.service.js";
+import { asyncHandler } from "../../middlewares/asyncHandler.js";
 
-export const registerUser = async(req, res) => {
-    try {
-        const result = await authService.registerUser(req.body);
-        res.status(201).json(result);
+export const registerUser = asyncHandler(async (req, res) => {
+	const result = await authService.registerUser(req.body);
+	res.status(201).json(result);
+});
 
-    }
-    catch (error) {
-        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas rejestracji" });
-    }
-}
+export const loginUser = asyncHandler(async (req, res) => {
+	const result = await authService.loginUser(req.body);
+	res.status(200).json(result);
+});
 
-export const loginUser = async(req, res) => {
-    try {
-        const result = await authService.loginUser(req.body);
-        res.status(200).json(result);
-    }
-    catch (error) {
-        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas logowania" });
-    }
-}
+export const changePassword = asyncHandler(async (req, res) => {
+	const result = await authService.changePassword(req.body);
+	res.status(200).json(result);
+});
 
-export const changePassword = async(req, res) => {
-    try {
-        const result = await authService.changePassword(req.body);
-        res.status(200).json(result);
-    }
-    catch (error) {
-        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas zmiany hasła" });
-    }
-}
-
-export const getWaiters = async(req, res) => {
-    try {
-        const result = await authService.getWaiters();
-        res.status(200).json(result);
-    }
-    catch (error) {
-        res.status(error.status || 500).json({ error: error.message || "Błąd serwera podczas pobierania listy kelnerów" });
-    }
-}
+export const getWaiters = asyncHandler(async (req, res) => {
+	const result = await authService.getWaiters();
+	res.status(200).json(result);
+});

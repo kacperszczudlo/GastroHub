@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { Clock, Check, X, Trash2 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useReservations, useTables } from '../../context';
 import { useUiFeedback } from '../../context/UiFeedbackContext';
 import reservationService from '../../services/reservation.service';
 import tableService from '../../services/table.service';
 
 export function AdminReservationsManager() {
-  const { reservations, setReservations, tables, setTables } = useApp();
+  const { reservations, setReservations } = useReservations();
+  const { tables, setTables } = useTables();
   const { showSuccess, showError, confirm } = useUiFeedback();
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export function AdminReservationsManager() {
           setReservations(items);
         }
       } catch {
-        // Keep current state if API call fails.
+        void 0;
       }
     };
 
@@ -34,7 +35,6 @@ export function AdminReservationsManager() {
     try {
       const updated = await reservationService.update(id, { status: 'accepted' });
       setReservations(prev => prev.map(r => (r.id === id ? updated : r)));
-      // Pobierz świeże tabele (rezerwacja przypisuje stolik)
       const tables = await tableService.getAll();
       setTables(tables);
     } catch {
@@ -50,7 +50,6 @@ export function AdminReservationsManager() {
       const nextStatus = reservation.status === 'accepted' ? 'cancelled' : 'rejected';
       const updated = await reservationService.update(id, { status: nextStatus });
       setReservations(prev => prev.map(r => (r.id === id ? updated : r)));
-      // Pobierz świeże tabele (zwolniony stolik)
       const tables = await tableService.getAll();
       setTables(tables);
     } catch {
