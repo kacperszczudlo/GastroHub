@@ -1,7 +1,8 @@
 import apiService from './api.service';
+import type { Schedule } from '../types';
 
 class ScheduleService {
-  async getByWaiter(waiterEmail: string): Promise<any[]> {
+  async getByWaiter(waiterEmail: string): Promise<Schedule[]> {
     try {
       const response = await apiService.getClient().get(`/schedules/waiter?waiter=${waiterEmail}`);
       return response.data?.schedules || [];
@@ -11,7 +12,7 @@ class ScheduleService {
     }
   }
 
-  async getAll(): Promise<any[]> {
+  async getAll(): Promise<Schedule[]> {
     try {
       const response = await apiService.getClient().get('/schedules');
       return response.data?.schedules || [];
@@ -21,7 +22,11 @@ class ScheduleService {
     }
   }
 
-  async create(schedule: { waiter: string; date: string; shift: 'morning' | 'afternoon' | 'evening' }): Promise<any> {
+  async create(schedule: {
+    waiter: string;
+    date: string;
+    shift: 'morning' | 'afternoon' | 'evening';
+  }): Promise<Schedule> {
     try {
       const response = await apiService.getClient().post('/schedules', schedule);
       return response.data?.data || response.data;
@@ -40,7 +45,10 @@ class ScheduleService {
     }
   }
 
-  async update(id: string, payload: Partial<{ status: string; shift: string; date: string }>): Promise<any> {
+  async update(
+    id: string,
+    payload: Partial<{ status: string; shift: string; date: string }>,
+  ): Promise<Schedule> {
     try {
       const response = await apiService.getClient().put(`/schedules/${id}`, payload);
       return response.data?.data || response.data;

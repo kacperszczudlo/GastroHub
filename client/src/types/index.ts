@@ -63,3 +63,37 @@ export interface Schedule {
 export interface OrderItem extends MenuItem {
   qty: number;
 }
+
+/** Menu reference as returned on embedded order lines */
+export type OpenOrderMenuRef =
+  | string
+  | {
+      _id?: string;
+      name?: string;
+      category?: string;
+      price?: number;
+      image?: string;
+      description?: string;
+    };
+
+export interface OpenOrderLineItem {
+  menuItemId?: OpenOrderMenuRef;
+  name?: string;
+  price?: number;
+  image?: string;
+  desc?: string;
+  quantity?: number;
+}
+
+export type OpenOrderTableId =
+  | string
+  | number
+  | { _id?: string | { toString(): string }; id?: string };
+
+/** Open order document from `/orders` API */
+export interface OpenOrder {
+  _id?: string;
+  id?: string;
+  tableId?: OpenOrderTableId;
+  items?: OpenOrderLineItem[];
+}

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Plus, Minus, Trash2, CheckCircle, RefreshCw } from 'lucide-react';
-import { OrderItem, MenuItem } from '../../types';
+import type { MenuItem, OpenOrderLineItem, OrderItem } from '../../types';
 import { useApp } from '../../context/AppContext';
 import menuService from '../../services/menu.service';
 import tableService from '../../services/table.service';
 import orderService from '../../services/order.service';
+import { getAxiosErrorPayload } from '../../utils/errors';
 
 export function WaiterPOS() {
-  const { menu, setMenu, tables, setTables, selectedTable, setSelectedTable } = useApp();
+  const { menu, setMenu, tables, setTables, setSelectedTable } = useApp();
   const [order, setOrder] = useState<OrderItem[]>([]);
   const [selectedTableId, setSelectedTableId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -71,15 +72,20 @@ export function WaiterPOS() {
           return;
         }
 
-        const mappedItems = (existing.items || []).map((item: any) => ({
-          id: item.menuItemId?._id?.toString?.() || item.menuItemId?.toString?.() || item.menuItemId,
-          name: item.menuItemId?.name || item.name || 'Pozycja menu',
-          category: item.menuItemId?.category || 'Menu',
-          price: Number(item.menuItemId?.price || item.price || 0),
-          image: item.menuItemId?.image || item.image || '',
-          desc: item.menuItemId?.description || item.desc || '',
-          qty: item.quantity
-        }));
+        const mappedItems = (existing.items || []).map((line: OpenOrderLineItem) => {
+          const mid = line.menuItemId;
+          const pop = typeof mid === 'object' && mid !== null ? mid : undefined;
+          const idRaw = pop?._id ?? (typeof mid === 'string' || typeof mid === 'number' ? mid : '');
+          return {
+            id: idRaw !== '' && idRaw != null ? String(idRaw) : '',
+            name: pop?.name || line.name || 'Pozycja menu',
+            category: pop?.category || 'Menu',
+            price: Number(pop?.price ?? line.price ?? 0),
+            image: pop?.image || line.image || '',
+            desc: pop?.description || line.desc || '',
+            qty: Number(line.quantity ?? 0),
+          } satisfies OrderItem;
+        });
 
         setOrder(mappedItems);
       } catch {
@@ -153,6 +159,10 @@ export function WaiterPOS() {
 
       if (existingOrder) {
         const existingId = existingOrder._id || existingOrder.id;
+        if (!existingId) {
+          setError('Nie można zaktualizować zamówienia: brak identyfikatora po stronie serwera.');
+          return;
+        }
         console.log('Aktualizuję istniejące zamówienie:', existingId);
         await orderService.updateOrderItems(existingId, { items, waiter });
       } else {
@@ -161,10 +171,10 @@ export function WaiterPOS() {
       }
       setError('');
       await refreshTables();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Błąd podczas zapisywania zamówienia:', err);
-      console.error('Szczegóły błędu:', err.response?.data || err.message);
-      setError(`Błąd: ${err.response?.data?.error || err.response?.data?.details || err.message || 'Nieznany błąd'}`);
+      const { error, details, message } = getAxiosErrorPayload(err);
+      setError(`Błąd: ${details || error || message || 'Nieznany błąd'}`);
     }
   };
 
@@ -190,10 +200,10 @@ export function WaiterPOS() {
       }
       setError('');
       await refreshTables();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Błąd podczas finalizacji płatności:', err);
-      console.error('Szczegóły błędu:', err.response?.data || err.message);
-      setError(`Błąd: ${err.response?.data?.error || err.message || 'Nie udało się zakończyć zamówienia w backendzie.'}`);
+      const { error, message } = getAxiosErrorPayload(err);
+      setError(`Błąd: ${error || message || 'Nie udało się zakończyć zamówienia w backendzie.'}`);
     }
   };
 

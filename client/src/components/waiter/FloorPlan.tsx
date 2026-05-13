@@ -1,7 +1,7 @@
 import { useState, useEffect, type DragEvent } from 'react';
 import { Users } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import type { Table } from '../../types';
+import type { OpenOrder, Table } from '../../types';
 import tableService from '../../services/table.service';
 import orderService from '../../services/order.service';
 import reservationService from '../../services/reservation.service';
@@ -16,7 +16,7 @@ export function FloorPlan({ editable = false }: FloorPlanProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragMode, setDragMode] = useState(editable);
   const [error, setError] = useState('');
-  const [openOrders, setOpenOrders] = useState<any[]>([]);
+  const [openOrders, setOpenOrders] = useState<OpenOrder[]>([]);
 
   // Fetch tables (and reservations - needed for the table modal & status hints)
   // on mount and on a short interval so the floor plan reflects check-ins,

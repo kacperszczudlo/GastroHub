@@ -1,5 +1,5 @@
 import apiService from './api.service';
-import { MenuItem } from '../types';
+import type { MenuItem } from '../types';
 import { MenuModel } from '../models';
 
 class MenuService {
@@ -7,7 +7,7 @@ class MenuService {
     try {
       const response = await apiService.getClient().get('/menu');
       const items = Array.isArray(response.data) ? response.data : (response.data.items || []);
-      return items.map((item: any) => MenuModel.fromAPI(item));
+      return items.map((item: unknown) => MenuModel.fromAPI(item));
     } catch (error) {
       console.error('Error fetching menu:', error);
       throw error;

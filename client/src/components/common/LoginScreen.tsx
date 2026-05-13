@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Eye, EyeOff, Utensils } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
+import { getAxiosErrorPayload } from '../../utils/errors';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/;
@@ -84,8 +85,9 @@ export function LoginScreen() {
       } else {
         setCurrentView('menu');
       }
-    } catch (error: any) {
-      setErrorMsg(error.response?.data?.error || 'Nie udało się wykonać operacji logowania.');
+    } catch (error) {
+      const { error: apiError, details } = getAxiosErrorPayload(error);
+      setErrorMsg(details || apiError || 'Nie udało się wykonać operacji logowania.');
     } finally {
       setLoading(false);
     }

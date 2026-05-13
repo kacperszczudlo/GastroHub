@@ -28,7 +28,7 @@ export function ClientReservationsList() {
     return () => {
       mounted = false;
     };
-  }, [setReservations]);
+  }, [role, setReservations]);
 
   const myReservations = reservations;
 

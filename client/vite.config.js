@@ -5,6 +5,12 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/** Linux often hits EMFILE with native fs.watch on large trees; polling avoids inotify exhaustion. */
+const isLinux = process.platform === 'linux';
+const watchUsePolling =
+  process.env.GASTROHUB_POLL === '1' ||
+  (isLinux && process.env.GASTROHUB_POLL !== '0');
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -21,6 +27,10 @@ export default defineConfig({
     },
   },
   server: {
+    watch: {
+      ignored: ['**/node_modules/**', '**/dist/**'],
+      ...(watchUsePolling ? { usePolling: true, interval: 1000 } : {}),
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:5000',

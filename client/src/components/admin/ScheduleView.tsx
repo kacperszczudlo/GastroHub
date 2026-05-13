@@ -6,6 +6,7 @@ import type { Schedule, UserRole } from '../../types';
 import { SHIFTS } from '../../constants';
 import authService from '../../services/auth.service';
 import scheduleService from '../../services/schedule.service';
+import { getAxiosErrorPayload } from '../../utils/errors';
 
 interface ScheduleViewProps {
   role: UserRole;
@@ -87,9 +88,10 @@ export function ScheduleView({ role }: ScheduleViewProps) {
       
       setSchedule(updated);
       setShowForm(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Błąd dodawania grafiku:', err);
-      setError(err.response?.data?.error || 'Nie udało się dodać grafiku');
+      const { error, details } = getAxiosErrorPayload(err);
+      setError(details || error || 'Nie udało się dodać grafiku');
     }
   };
 
@@ -98,11 +100,8 @@ export function ScheduleView({ role }: ScheduleViewProps) {
     return shift?.label || shiftKey;
   };
 
-  const handleDelete = async (idOrMaybeObj: string | any) => {
+  const handleDelete = async (id: string) => {
     try {
-      const id = typeof idOrMaybeObj === 'string'
-        ? idOrMaybeObj
-        : (idOrMaybeObj?._id || idOrMaybeObj?.id);
       if (!id) throw new Error('Brak id grafiku');
       await scheduleService.delete(id);
       
@@ -112,9 +111,10 @@ export function ScheduleView({ role }: ScheduleViewProps) {
         : await scheduleService.getByWaiter(currentUserEmail || '');
       
       setSchedule(updated);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Błąd usuwania grafiku:', err);
-      setError(err.response?.data?.error || 'Nie udało się usunąć grafiku');
+      const { error, details } = getAxiosErrorPayload(err);
+      setError(details || error || 'Nie udało się usunąć grafiku');
     }
   };
 

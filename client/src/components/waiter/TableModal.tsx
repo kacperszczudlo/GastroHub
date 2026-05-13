@@ -3,11 +3,12 @@ import { Calendar, Users, XCircle, UserCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useUiFeedback } from '../../context/UiFeedbackContext';
-import type { Table as TableType, Reservation, UserRole } from '../../types';
+import type { Table as TableType, Reservation, UserRole, OpenOrder, OpenOrderLineItem } from '../../types';
 import tableService from '../../services/table.service';
 import authService from '../../services/auth.service';
 import orderService from '../../services/order.service';
 import reservationService from '../../services/reservation.service';
+import { getAxiosErrorPayload } from '../../utils/errors';
 
 interface TableModalProps {
   role: UserRole;
@@ -63,16 +64,23 @@ export function TableModal({ role }: TableModalProps) {
   const [waiters, setWaiters] = useState<Waiter[]>([]);
   const [loadingWaiters, setLoadingWaiters] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [openOrder, setOpenOrder] = useState<any | null>(null);
+  const [openOrder, setOpenOrder] = useState<OpenOrder | null>(null);
+  const [clockMs, setClockMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setClockMs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (selectedTable && role === 'admin') {
       setLoadingWaiters(true);
-      authService.getWaiters()
-        .then(list => {
+      authService
+        .getWaiters()
+        .then((list) => {
           setWaiters(list);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error('Błąd podczas pobierania kelnerów:', err);
         })
         .finally(() => {
@@ -117,8 +125,8 @@ export function TableModal({ role }: TableModalProps) {
   // Reservation that is closest to "now" and within the check-in window.
   // Lets the staff click "Klient przybył" without picking from a list.
   const checkInCandidate = useMemo(() => {
-    const now = Date.now();
-    return tableReservations.find(r => {
+    const now = clockMs;
+    return tableReservations.find((r) => {
       if (r.status !== 'accepted') return false;
       const start = buildReservationStart(r);
       if (!start) return false;
@@ -126,7 +134,7 @@ export function TableModal({ role }: TableModalProps) {
       // Allow a 15 min late grace beyond the start time, plus the upfront window.
       return diffMinutes <= CHECK_IN_WINDOW_MINUTES && diffMinutes >= -15;
     });
-  }, [tableReservations]);
+  }, [tableReservations, clockMs]);
 
   const activeReservation = useMemo(
     () => tableReservations.find(r => r.status === 'active') || null,
@@ -184,9 +192,10 @@ export function TableModal({ role }: TableModalProps) {
       setReservations(prev => prev.map(r => (r.id === updated.id ? updated : r)));
       await refreshTables();
       showSuccess('Klient został oznaczony jako przybyły. Stolik jest teraz zajęty.');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Błąd check-in rezerwacji:', err);
-      showError(err?.response?.data?.details || 'Nie udało się oznaczyć klienta jako przybyłego.');
+      const { details, error } = getAxiosErrorPayload(err);
+      showError(details || error || 'Nie udało się oznaczyć klienta jako przybyłego.');
     } finally {
       setProcessing(false);
     }
@@ -204,9 +213,10 @@ export function TableModal({ role }: TableModalProps) {
       setReservations(prev => prev.map(r => (r.id === updated.id ? updated : r)));
       await refreshTables();
       showSuccess('Wizyta zakończona, stolik zwolniony.');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Błąd kończenia rezerwacji:', err);
-      showError(err?.response?.data?.details || 'Nie udało się zwolnić stolika.');
+      const { details, error } = getAxiosErrorPayload(err);
+      showError(details || error || 'Nie udało się zwolnić stolika.');
     } finally {
       setProcessing(false);
     }
@@ -389,18 +399,23 @@ export function TableModal({ role }: TableModalProps) {
             <div className="bg-white p-3 rounded border">
               <div className="text-sm text-gray-700 mb-2">ID zamówienia: {openOrder._id || openOrder.id}</div>
               <ul className="space-y-2">
-                {(openOrder.items || []).map((it: any, idx: number) => (
-                  <li key={it.menuItemId?._id || it.menuItemId || idx} className="flex justify-between">
+                {(openOrder.items || []).map((it: OpenOrderLineItem, idx: number) => {
+                  const mid = it.menuItemId;
+                  const pop = typeof mid === 'object' && mid !== null ? mid : undefined;
+                  const key = String(pop?._id ?? (typeof mid === 'string' ? mid : idx));
+                  return (
+                  <li key={key} className="flex justify-between">
                     <div>
-                      <div className="font-medium">{it.menuItemId?.name || it.name || 'Pozycja'}</div>
-                      <div className="text-xs text-gray-500">{it.menuItemId?.description || ''}</div>
+                      <div className="font-medium">{pop?.name || it.name || 'Pozycja'}</div>
+                      <div className="text-xs text-gray-500">{pop?.description || ''}</div>
                     </div>
                     <div className="text-right">
                       <div className="font-bold">x{it.quantity}</div>
-                      <div className="text-xs text-gray-600">{(it.menuItemId?.price || it.price || 0).toFixed(2)} zł</div>
+                      <div className="text-xs text-gray-600">{(Number(pop?.price ?? it.price ?? 0)).toFixed(2)} zł</div>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </div>
           )}
