@@ -253,11 +253,11 @@ export function LoginScreen() {
                 <span className="bg-white px-2 text-gray-500">lub</span>
               </div>
             </div>
-            <div className="flex justify-center [&>div]:w-full">
+            <div className="flex justify-center">
               <GoogleLogin
                 text="continue_with"
                 shape="rectangular"
-                width="100%"
+                width={320}
                 locale="pl"
                 onSuccess={async (credentialResponse) => {
                   if (!credentialResponse.credential) {
