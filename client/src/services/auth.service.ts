@@ -6,6 +6,11 @@ class AuthService {
     return response.data?.token;
   }
 
+  async loginWithGoogle(credential: string): Promise<string> {
+    const response = await apiService.getClient().post('/auth/google', { credential });
+    return response.data?.token;
+  }
+
   async register(email: string, password: string): Promise<void> {
     await apiService.getClient().post('/auth/register', { email, password });
   }

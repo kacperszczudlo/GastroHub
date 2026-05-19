@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Eye, EyeOff, Utensils } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context';
 import { getAxiosErrorPayload } from '../../utils/errors';
@@ -8,7 +9,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/;
 
 export function LoginScreen() {
-  const { login, register, changePassword } = useAuth();
+  const { login, register, changePassword, loginWithGoogle } = useAuth();
   const { setCurrentView } = useNavigation();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [isResetMode, setIsResetMode] = useState(false);
@@ -241,6 +242,56 @@ export function LoginScreen() {
             {submitLabel}
           </button>
         </form>
+
+        {import.meta.env.VITE_GOOGLE_CLIENT_ID && !isResetMode && (
+          <div className={`mt-6 ${loading ? 'pointer-events-none opacity-60' : ''}`}>
+            <div className="relative mb-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase tracking-wide">
+                <span className="bg-white px-2 text-gray-500">lub</span>
+              </div>
+            </div>
+            <div className="flex justify-center [&>div]:w-full">
+              <GoogleLogin
+                text="continue_with"
+                shape="rectangular"
+                width="100%"
+                locale="pl"
+                onSuccess={async (credentialResponse) => {
+                  if (!credentialResponse.credential) {
+                    return;
+                  }
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                  setLoading(true);
+                  try {
+                    const role = await loginWithGoogle(credentialResponse.credential);
+                    if (role === 'admin') {
+                      setCurrentView('admin_dashboard');
+                    } else if (role === 'waiter') {
+                      setCurrentView('floor');
+                    } else {
+                      setCurrentView('menu');
+                    }
+                  } catch (error) {
+                    const { error: apiError, details } = getAxiosErrorPayload(error);
+                    setErrorMsg(details || apiError || 'Nie udało się zalogować przez Google.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                onError={() => {
+                  setErrorMsg('Logowanie Google nie powiodło się.');
+                }}
+              />
+            </div>
+            <p className="mt-2 text-center text-xs text-gray-500">
+              Pierwsze logowanie Google utworzy konto klienta (jeśli jeszcze go nie masz).
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

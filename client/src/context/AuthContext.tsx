@@ -7,6 +7,7 @@ interface AuthContextType {
   role: UserRole;
   email: string | null;
   login: (email: string, password: string) => Promise<UserRole>;
+  loginWithGoogle: (credential: string) => Promise<UserRole>;
   register: (email: string, password: string) => Promise<UserRole>;
   changePassword: (email: string, oldPassword: string, newPassword: string) => Promise<void>;
   logout: () => void;
@@ -60,6 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return applySession(token);
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    const token = await authService.loginWithGoogle(credential);
+    return applySession(token);
+  };
+
   const register = async (email: string, password: string) => {
     await authService.register(email, password);
     const token = await authService.login(email, password);
@@ -78,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ role, email, login, register, changePassword, logout }}>
+    <AuthContext.Provider value={{ role, email, login, loginWithGoogle, register, changePassword, logout }}>
       {children}
     </AuthContext.Provider>
   );
