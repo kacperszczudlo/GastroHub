@@ -8,13 +8,6 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_POLICY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/;
 
-const DEMO_PASSWORD = "GastroHub123!";
-const DEMO_USERS = [
-	{ email: "demo.client@gastrohub.local", role: "client" },
-	{ email: "demo.waiter@gastrohub.local", role: "waiter" },
-	{ email: "demo.admin@gastrohub.local", role: "admin" }
-];
-
 const normalizeEmail = (email) => email.trim().toLowerCase();
 
 const validateRegistrationData = (email, password) => {
@@ -59,24 +52,6 @@ export const registerUser = async ({ email, password, role }) => {
 	await newUser.save();
 
 	return { message: "Użytkownik zarejestrowany pomyślnie" };
-};
-
-export const seedDemoUsers = async () => {
-	for (const demoUser of DEMO_USERS) {
-		const existingUser = await User.findOne({ email: demoUser.email });
-		if (existingUser) {
-			continue;
-		}
-
-		const salt = await bcrypt.genSalt(10);
-		const hashedPassword = await bcrypt.hash(DEMO_PASSWORD, salt);
-
-		await User.create({
-			email: demoUser.email,
-			password: hashedPassword,
-			role: demoUser.role
-		});
-	}
 };
 
 export const loginUser = async ({ email, password }) => {

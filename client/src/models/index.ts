@@ -19,7 +19,7 @@ export class MenuModel {
       name: String(d.name ?? ''),
       category: String(d.category ?? ''),
       price: Number(d.price ?? 0),
-      image: String(d.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'),
+      image: String(d.image ?? ''),
       desc: String(d.description || 'Brak opisu'),
     };
   }

@@ -345,8 +345,12 @@ export function WaiterPOS() {
                 onClick={() => addToOrder(item)}
                 className="bg-white rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition active:scale-95 flex flex-col h-full"
               >
-                <div className="h-24 rounded-lg overflow-hidden mb-2 relative">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                <div className="h-24 rounded-lg overflow-hidden mb-2 relative bg-gray-100 flex items-center justify-center">
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-medium text-gray-400">Brak zdjęcia</span>
+                  )}
                   <div className="absolute bottom-0 right-0 bg-white px-2 py-1 text-xs font-bold rounded-tl-lg shadow-sm">
                     {item.price.toFixed(2)} zł
                   </div>

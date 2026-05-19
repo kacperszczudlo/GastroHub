@@ -184,11 +184,17 @@ export function AdminMenuManager() {
             {menu.map(item => (
               <tr key={item.id} className="border-b last:border-0 hover:bg-gray-50">
                 <td className="p-3 whitespace-nowrap">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="h-12 w-12 rounded object-cover"
-                  />
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-12 w-12 rounded object-cover"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">
+                      Brak
+                    </div>
+                  )}
                 </td>
                 <td className="p-3 font-medium text-gray-900 max-w-xs truncate">{item.name}</td>
                 <td className="p-3 text-gray-600 whitespace-nowrap">{item.category}</td>
