@@ -11,7 +11,13 @@ const userSchema = new mongoose.Schema({
         trim: true,
         match: [EMAIL_REGEX, "Podaj poprawny adres email"]
     },
-    password: { type: String, required: true },
+    password: {
+        type: String,
+        required: function requiredPassword() {
+            return !this.googleSub;
+        }
+    },
+    googleSub: { type: String, sparse: true, unique: true, trim: true },
     role: { type: String, enum: ['client', 'waiter', 'admin'], default: 'client' }
 }, { timestamps: true });
 

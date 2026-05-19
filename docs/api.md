@@ -17,6 +17,18 @@ W tym pliku znajdują się przykłady podstawowych zapytań do naszego API. Peł
   ```
 * **Oczekiwana odpowiedź:** Obiekt zawierający komunikat sukcesu oraz dane utworzonego użytkownika.
 
+### Logowanie Google (JWT z przycisku Google)
+* **URL:** `/api/auth/google`
+* **Metoda:** `POST`
+* **Body (JSON):**
+  ```json
+  {
+    "credential": "<id_token z odpowiedzi Sign in with Google>"
+  }
+  ```
+* **Oczekiwana odpowiedź:** `{ "token": "<JWT aplikacji>" }` — ten sam format co przy `/api/auth/login`.
+* **Uwaga:** Serwer musi mieć ustawione `GOOGLE_CLIENT_ID` (ten sam identyfikator co `VITE_GOOGLE_CLIENT_ID` w kliencie). Pierwsze poprawne logowanie tworzy użytkownika z rolą `client` albo łączy konto z istniejącym emailem (hasło lokalne nadal działa).
+
 ### Logowanie Użytkownika
 * **URL:** `/api/auth/login`
 * **Metoda:** `POST`

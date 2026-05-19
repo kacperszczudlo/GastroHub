@@ -7,6 +7,7 @@ const authMocks = vi.hoisted(() => ({
   login: vi.fn(),
   register: vi.fn(),
   changePassword: vi.fn(),
+  loginWithGoogle: vi.fn(),
 }));
 
 const navMocks = vi.hoisted(() => ({
@@ -18,6 +19,7 @@ vi.mock('../../context/AuthContext', () => ({
     login: authMocks.login,
     register: authMocks.register,
     changePassword: authMocks.changePassword,
+    loginWithGoogle: authMocks.loginWithGoogle,
   }),
 }));
 
