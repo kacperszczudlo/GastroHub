@@ -86,11 +86,15 @@ function MenuItemCard({ item }: MenuItemCardProps) {
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1">
       <div className="relative h-64 bg-gray-100 flex items-center justify-center p-6">
-        <img
-          src={item.image}
-          alt={item.name}
-          className="w-full h-full object-cover rounded-xl"
-        />
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.name}
+            className="w-full h-full object-cover rounded-xl"
+          />
+        ) : (
+          <span className="text-sm font-medium text-gray-400">Brak zdjęcia</span>
+        )}
       </div>
       <div className="p-6 flex flex-col">
         <h3 className="text-xl font-black text-gray-900 uppercase">{item.name}</h3>

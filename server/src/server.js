@@ -1,6 +1,5 @@
 import app from './app.js';
 import { connectDB } from './database/connect.js';
-import { seedDemoUsers } from './modules/auth/auth.service.js';
 import { pruneReservations } from './modules/reservation/reservation.service.js';
 
 const PORT = process.env.PORT || 5000;
@@ -8,11 +7,6 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
     try {
         await connectDB();
-        
-        if (process.env.SEED_DEMO_USERS === 'true') {
-            await seedDemoUsers();
-            console.log('Demo users seeded');
-        }
 
         app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
