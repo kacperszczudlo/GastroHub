@@ -81,7 +81,7 @@ Główne kolekcje MongoDB (zdefiniowane jako modele Mongoose w `server/src/modul
 ```
 server/src/
 ├── app.js                # konfiguracja Express + montaż routerów
-├── server.js             # bootstrap (DB connect, seed, cron prune)
+├── server.js             # bootstrap (DB connect, cron prune)
 ├── database/connect.js   # połączenie z Mongo
 ├── middlewares/          # auth, role guard, error handler
 └── modules/

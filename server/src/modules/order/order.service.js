@@ -8,8 +8,6 @@ export const createOrder = async (payload, user) => {
 	const { items, tableId, waiter } = payload;
 	const userId = user?.userId;
 
-	console.log("createOrder", { tableId, waiter, itemsCount: items?.length, userId });
-
 	if (!userId) {
 		throw createHttpError(401, "Brak poprawnych danych użytkownika w tokenie");
 	}
@@ -26,7 +24,6 @@ export const createOrder = async (payload, user) => {
 	if (tableId) {
 		const existingOpenOrder = await orderRepository.findOpenOrderByTable(tableId);
 		if (existingOpenOrder) {
-			console.log("Open order exists for table, replacing items:", existingOpenOrder._id);
 			existingOpenOrder.items = normalized;
 			existingOpenOrder.totalPrice = totalPrice;
 			if (waiter) existingOpenOrder.waiter = waiter;
@@ -44,12 +41,10 @@ export const createOrder = async (payload, user) => {
 		totalPrice,
 		status: "open"
 	});
-	console.log("Order saved:", savedOrder._id);
 
 	if (savedOrder.tableId) {
 		try {
 			await tableRepository.linkOrderToTable(savedOrder.tableId, savedOrder._id);
-			console.log(`Table ${savedOrder.tableId} linked to order ${savedOrder._id}`);
 		} catch (err) {
 			console.error("Failed to link order to table:", err);
 		}
@@ -81,14 +76,8 @@ export const getAllOrders = async () => {
 };
 
 export const getOpenOrders = async () => {
-	try {
-		const orders = await orderRepository.findOpenOrdersWithPopulates();
-		console.log("Found open orders count:", orders.length);
-		return { orders };
-	} catch (err) {
-		console.error("Error fetching open orders:", err.message, err.stack);
-		throw err;
-	}
+	const orders = await orderRepository.findOpenOrdersWithPopulates();
+	return { orders };
 };
 
 export const getOpenOrderByTable = async (tableId) => {

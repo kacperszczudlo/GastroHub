@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { LoginScreen } from './LoginScreen';
 
 const authMocks = vi.hoisted(() => ({
@@ -30,13 +31,16 @@ vi.mock('../../context', () => ({
 }));
 
 describe('LoginScreen', () => {
+  const renderWithGoogleProvider = (ui: any) =>
+    render(<GoogleOAuthProvider clientId="test-client-id">{ui}</GoogleOAuthProvider>);
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('shows validation error for invalid email', async () => {
     const user = userEvent.setup();
-    const { container } = render(<LoginScreen />);
+    const { container } = renderWithGoogleProvider(<LoginScreen />);
 
     const emailInput = container.querySelector('input[type="email"]');
     const passwordInput = container.querySelector('input[type="password"]');
@@ -56,7 +60,7 @@ describe('LoginScreen', () => {
   it('navigates admin to admin dashboard after successful login', async () => {
     const user = userEvent.setup();
     authMocks.login.mockResolvedValue('admin');
-    const { container } = render(<LoginScreen />);
+    const { container } = renderWithGoogleProvider(<LoginScreen />);
 
     await user.type(container.querySelector('input[type="email"]')!, 'chef@gastrohub.test');
     await user.type(container.querySelector('input[type="password"]')!, 'AnyPassword1');
@@ -70,7 +74,7 @@ describe('LoginScreen', () => {
 
   it('requires strong password in register mode', async () => {
     const user = userEvent.setup();
-    const { container } = render(<LoginScreen />);
+    const { container } = renderWithGoogleProvider(<LoginScreen />);
 
     await user.click(screen.getByRole('button', { name: /^rejestracja$/i }));
     await user.type(container.querySelector('input[type="email"]')!, 'new@gastrohub.test');

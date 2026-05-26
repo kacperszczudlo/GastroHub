@@ -19,7 +19,6 @@ export function errorHandler(err, req, res, _next) {
 		userAgent: req.get("user-agent") ?? undefined
 	};
 
-	// Metryka błędów API: osobne typy dla 4xx i 5xx
 	if (status >= 500) {
 		apiErrorsTotal.inc({ type: "server_error" });
 		console.error(
