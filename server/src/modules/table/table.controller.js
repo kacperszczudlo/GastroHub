@@ -27,27 +27,14 @@ export const getTableById = asyncHandler(async (req, res) => {
 });
 
 export const assignWaiter = asyncHandler(async (req, res) => {
-	console.log("[TABLE ASSIGN] POST /tables/:id/assign", {
-		tableId: req.params.id,
-		waiter: req.body.waiter,
-		userEmail: req.user?.email,
-		userRole: req.user?.role
-	});
 	const tableId = req.params.id;
 	const { waiter } = req.body;
 	const result = await tableService.assignWaiter(tableId, waiter || null, req.user);
-	console.log("[TABLE ASSIGN] Success:", result);
 	res.status(200).json(result);
 });
 
 export const unassignWaiter = asyncHandler(async (req, res) => {
-	console.log("[TABLE UNASSIGN] POST /tables/:id/unassign", {
-		tableId: req.params.id,
-		userEmail: req.user?.email,
-		userRole: req.user?.role
-	});
 	const tableId = req.params.id;
 	const result = await tableService.unassignWaiter(tableId, req.user);
-	console.log("[TABLE UNASSIGN] Success:", result);
 	res.status(200).json(result);
 });

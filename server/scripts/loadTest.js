@@ -40,7 +40,6 @@ async function worker() {
 		const start = Date.now();
 		try {
 			const res = await fetch(url);
-			// konsumuj body, żeby nie zaburzać wyników przez backpressure
 			await res.arrayBuffer();
 			const ms = Date.now() - start;
 			totalLatencyMs += ms;

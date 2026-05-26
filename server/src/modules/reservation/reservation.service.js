@@ -112,7 +112,6 @@ export const updateReservationStatus = async (id, payload) => {
 
 		reservation.tableId = table._id;
 		reservation.status = "accepted";
-		console.log(`Reservation ${id} accepted -> table ${table.tableNumber} assigned`);
 	} else if (status === "rejected" || status === "cancelled") {
 		reservation.status = status;
 		reservation.tableId = null;
@@ -140,7 +139,6 @@ export const checkInReservation = async (id, user) => {
 
 	reservation.status = "active";
 	await reservation.save();
-	console.log(`Reservation ${id} checked in by ${user?.email || "unknown"}`);
 
 	const populated = await populateReservation(Reservation.findById(reservation._id));
 	return { message: "Klient został oznaczony jako przybyły", data: populated };
@@ -156,7 +154,6 @@ export const completeReservation = async (id, user) => {
 	}
 	reservation.status = "completed";
 	await reservation.save();
-	console.log(`Reservation ${id} manually completed by ${user?.email || "unknown"}`);
 	const populated = await populateReservation(Reservation.findById(reservation._id));
 	return { message: "Rezerwacja została zakończona", data: populated };
 };
@@ -167,7 +164,6 @@ export const completeActiveReservationForTable = async (tableId) => {
 	if (!reservation) return null;
 	reservation.status = "completed";
 	await reservation.save();
-	console.log(`Active reservation ${reservation._id} on table ${tableId} marked completed`);
 	return reservation;
 };
 

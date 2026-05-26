@@ -4,7 +4,6 @@ import {
 	httpRequestsTotal,
 } from "../metrics/index.js";
 
-/** Wzorzec routy (np. /api/menu/:id), nie konkretny URL z ID */
 function getRoutePattern(req) {
 	if (req.route?.path) {
 		const suffix = req.route.path === "/" ? "" : req.route.path;

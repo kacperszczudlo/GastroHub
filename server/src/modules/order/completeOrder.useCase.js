@@ -14,7 +14,6 @@ export async function executeCompleteOrder(id) {
 		const tableId = updatedOrder.tableId?._id || updatedOrder.tableId;
 		await tableRepository.unlinkOrderFromTable(tableId);
 		await closeActiveReservationForTable(tableId);
-		console.log(`Order ${id} paid, table ${tableId} unlinked, active reservation closed if any`);
 	}
 
 	return { message: "Zamówienie zostało opłacone", data: updatedOrder };
