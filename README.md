@@ -245,6 +245,7 @@ Przy `EMFILE: too many open files` w trybie watch użyj wariantu polling:
   [`docs/GastroHubApi.postman_collection.json`](docs/GastroHubApi.postman_collection.json).
 - **Architektura i diagramy** (use case, ERD, warstwy): [`docs/architecture.md`](docs/architecture.md).
 - **Makiety / opis layoutu widoków:** [`docs/ui.md`](docs/ui.md).
+- **Monitoring (Prometheus + Grafana):** [`docs/monitoring.md`](docs/monitoring.md).
 - **Wybór tematu projektu:** [`docs/topic-selection.md`](docs/topic-selection.md).
 
 ## 10. Znane ograniczenia

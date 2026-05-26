@@ -1,92 +1,126 @@
 # Monitoring (Prometheus + Grafana)
 
-Ten dokument opisuje konfigurację monitoringu backendu GastroHub (Express) z użyciem **Prometheus** i **Grafana**.
+Ten dokument opisuje wdrożenie monitoringu backendu **GastroHub API** (Node.js + Express) przy użyciu **prom-client**, **Prometheus** i **Grafana** (bez Dockera) — w stylu krok‑po‑kroku, jak w instrukcji laboratoryjnej.
 
-## 1. Co monitorujemy
+## 1. Jak to działa (skrót)
 
-- **Metryki HTTP (prom-client)**:
-  - `http_requests_total{method,route,status_code}` – liczba żądań
-  - `http_request_duration_ms_bucket{...}` – histogram czasu odpowiedzi (p50/p95 w Grafanie)
-  - `active_connections` – liczba aktualnie obsługiwanych połączeń
-- **Metryki Node.js** (domyślne z `collectDefaultMetrics`), np.:
-  - `process_resident_memory_bytes` – RAM procesu
-  - `process_start_time_seconds` – czas startu procesu
-- **Metryka błędów API**:
-  - `api_errors_total{type}` – błędy API pogrupowane wg typu: `not_found`, `bad_request`, `server_error`
+- Aplikacja udostępnia endpoint `GET /metrics`, który zwraca metryki w formacie Prometheusa.
+- **Prometheus** działa w modelu *pull* i co kilka sekund odpyta `http://localhost:<PORT>/metrics`.
+- **Grafana** wizualizuje metryki z Prometheusa (PromQL).
+
+Uwaga o etykietach (kardynalność): nie używamy jako label czegoś unikalnego na każde żądanie (np. id usera, pełny URL z id). Zamiast `/api/tables/507f...` używamy wzorca routy `/api/tables/:id`.
+
+## 2. Backend (prom-client, middleware, /metrics)
+
+### 2.1. Instalacja zależności
+
+```bash
+cd server
+npm install
+```
+
+`prom-client` jest już dodany w backendzie.
+
+### 2.2. Metryki i middleware
+
+W backendzie zdefiniowane są:
+- `http_requests_total` (Counter) – liczba żądań HTTP z etykietami: `method`, `route`, `status_code`
+- `http_request_duration_ms` (Histogram) – czasy odpowiedzi w ms (do p50/p95)
+- `active_connections` (Gauge) – aktywnie obsługiwane żądania
+- `api_errors_total` (Counter) – błędy API wg typu: `not_found`, `bad_request`, `server_error`
 
 Źródła w kodzie:
-- Endpoint `/metrics`: `server/src/app.js`
 - Metryki: `server/src/metrics/index.js`
-- Middleware HTTP: `server/src/middlewares/metricsMiddleware.js`
-- Logowanie błędów + inkrementacja `api_errors_total`: `server/src/middlewares/errorHandler.js`
+- Middleware: `server/src/middlewares/metricsMiddleware.js`
+- Error handler + logowanie błędów + `api_errors_total`: `server/src/middlewares/errorHandler.js`
 
-## 2. Uruchomienie lokalne
+### 2.3. Endpoint `/metrics`
 
-### 2.1 Backend
+Endpoint jest podpięty w `server/src/app.js`:
+- `GET /metrics` zwraca `register.metrics()` z odpowiednim `Content-Type`.
 
-Uruchom backend (port domyślny to `5000`):
+### 2.4. Uruchomienie backendu i weryfikacja
 
 ```bash
 cd server
 npm run dev
 ```
 
-Weryfikacja endpointu metryk:
+W drugim terminalu:
 
 ```bash
 curl http://localhost:5000/metrics | head -n 20
 ```
 
-### 2.2 Prometheus
+Jeśli widzisz linie zaczynające się od `# HELP` / `# TYPE`, backend jest gotowy.
 
-Plik konfiguracyjny w repozytorium: `prometheus.yml`.
+## 3. Prometheus
 
-Najważniejsze ustawienia:
-- `job_name: gastrohub-api`
+### 3.1. Instalacja (Linux)
+
+Pobierz archiwum `tar.gz` ze strony `prometheus.io/download`, rozpakuj i uruchamiaj binarkę `prometheus`.
+
+### 3.2. Konfiguracja scrapowania
+
+W repo znajduje się gotowy plik `prometheus.yml`. Najważniejsze parametry:
+- `scrape_interval: 5s`
 - `targets: ["localhost:5000"]`
 - `metrics_path: /metrics`
-- `scrape_interval: 5s`
 
-Uruchom Prometheus (przykład dla binarki rozpakowanej w `~/Pobrane/prometheus-3.11.3.linux-amd64/`):
+### 3.3. Uruchomienie
 
-```bash
-mkdir -p ~/Pobrane/prometheus-3.11.3.linux-amd64/data
-
-~/Pobrane/prometheus-3.11.3.linux-amd64/prometheus \
-  --config.file="$(pwd)/prometheus.yml" \
-  --storage.tsdb.path=~/Pobrane/prometheus-3.11.3.linux-amd64/data \
-  --web.listen-address=127.0.0.1:9090
-```
-
-Weryfikacja:
-- UI: `http://localhost:9090`
-- Targets: `http://localhost:9090/targets` → `gastrohub-api` powinien mieć status **UP**
-
-### 2.3 Grafana
-
-Grafana (standalone) była uruchamiana z katalogu `~/Pobrane/grafana-v11.5.2/`.
-
-Start:
+Uruchom Prometheusa wskazując plik konfiguracyjny (uruchamiasz z katalogu repo):
 
 ```bash
-~/Pobrane/grafana-v11.5.2/bin/grafana server --homepath=~/Pobrane/grafana-v11.5.2
+./prometheus --config.file=./prometheus.yml
 ```
 
-Logowanie:
-- `http://localhost:3000`
-- login: `admin`
-- hasło: `admin` (przy pierwszym logowaniu Grafana prosi o zmianę)
+W praktyce, jeśli binarka jest w innym katalogu, podajesz pełną ścieżkę do `prometheus` oraz do `prometheus.yml`.
 
-Datasource Prometheus:
-- URL: `http://127.0.0.1:9090`
-- przycisk **Save & test** powinien zwrócić zielony komunikat
+### 3.4. Weryfikacja działania
 
-Import dashboardu:
-- Grafana → **Dashboards → Import**
-- upload pliku `grafana-dashboard.json` (z katalogu głównego repo)
-- wybór datasource: **Prometheus**
+1. Otwórz UI: `http://localhost:9090`
+2. Wejdź w `Status → Targets` i sprawdź, czy `gastrohub-api` ma status **UP**.
+3. W zakładce `Query` wpisz i uruchom:
 
-## 3. Przydatne zapytania PromQL (z labu)
+```promql
+http_requests_total
+```
+
+Powinieneś zobaczyć serie z etykietami `method/route/status_code`.
+
+## 4. Grafana
+
+### 4.1. Instalacja
+
+Zainstaluj Grafanę (Linux: pakiet systemowy lub tarball ze strony Grafany). Następnie uruchom i wejdź na:
+`http://localhost:3000`.
+
+### 4.2. Dodanie datasource Prometheus
+
+1. `Connections → Data sources → Add new data source`
+2. Wybierz **Prometheus**
+3. `Prometheus server URL`: `http://localhost:9090`
+4. `Save & test` → zielony komunikat
+
+### 4.3. Import dashboardu
+
+W repo jest gotowy dashboard: `grafana-dashboard.json`.
+
+1. `Dashboards → Import`
+2. `Upload dashboard JSON file` → wybierz `grafana-dashboard.json`
+3. W polu Prometheus wybierz datasource z pkt 4.2
+4. `Import`
+
+Dashboard zawiera panele m.in. dla:
+- łącznej liczby żądań
+- błędów 4xx/5xx
+- RAM procesu i uptime
+- p50/p95 czasu odpowiedzi
+- aktywnych połączeń
+- `api_errors_total` (wg typu)
+
+## 5. Zapytania PromQL
 
 ```promql
 sum by(status_code) (http_requests_total)
@@ -118,18 +152,26 @@ Metryka błędów API:
 sum by(type) (api_errors_total)
 ```
 
-## 4. Logowanie błędów po stronie serwera
+## 6. Logowanie błędów i monitorowanie wydajności
 
-Backend loguje błędy w `server/src/middlewares/errorHandler.js`:
-- **czas**: ISO timestamp
-- **typ**: 4xx (warn) vs 5xx (error)
-- **kontekst**: metoda, ścieżka, IP, User-Agent
+### 6.1. Logowanie błędów (serwer)
 
-Równolegle inkrementowana jest metryka `api_errors_total{type=...}`.
+W `server/src/middlewares/errorHandler.js` logujemy:
+- czas wystąpienia (ISO)
+- typ błędu (4xx/5xx)
+- kontekst: metoda, ścieżka, IP, User-Agent
 
-## 5. Test stabilności pod obciążeniem (bez zewnętrznych narzędzi)
+Równolegle inkrementujemy metrykę `api_errors_total{type=...}`.
 
-W repo jest prosty skrypt bez dodatkowych zależności:
+### 6.2. Monitorowanie czasu odpowiedzi
+
+Middleware metryk zapisuje czas w histogramie `http_request_duration_ms`, co umożliwia liczenie percentyli (p50/p95) w PromQL/Grafanie.
+
+## 7. Test stabilności pod obciążeniem
+
+W repo dodany jest prosty load test bez dodatkowych zależności: `server/scripts/loadTest.js`.
+
+Przykład:
 
 ```bash
 cd server
@@ -143,12 +185,15 @@ cd server
 npm run loadtest -- --url http://localhost:5000/api/tables/000000000000000000000000/ --duration 10 --concurrency 10
 ```
 
-Po teście sprawdź:
-- Prometheus query: `sum by(type) (api_errors_total)`
-- Grafana dashboard: panel `api_errors_total (wg typu)`
+Po teście w Prometheusie/Grafanie sprawdź `sum by(type) (api_errors_total)`.
 
-## 6. Materiały do zaliczenia (screenshoty)
+## 8. Screenshots (podgląd w dokumentacji)
 
-- Grafana dashboard z danymi we wszystkich panelach
-- Prometheus → Status/Targets z jobem `gastrohub-api` w statusie **UP**
+Prometheus Targets (job `gastrohub-api` = UP):
+
+![](images/monitoring-prometheus-targets.png)
+
+Grafana dashboard (z panelem `api_errors_total`):
+
+![](images/monitoring-grafana-api-errors.png)
 
