@@ -7,12 +7,15 @@ import tableRoutes from './modules/table/table.routes.js';
 import orderRoutes from './modules/order/order.routes.js';
 import scheduleRoutes from './modules/schedule/schedule.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
+import { metricsMiddleware } from './middlewares/metricsMiddleware.js';
+import { register } from './metrics/index.js';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(metricsMiddleware);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
@@ -23,6 +26,11 @@ app.use('/api/schedules', scheduleRoutes);
 
 app.get('/', (req, res) => {
   res.send('GastroHub API is running');
+});
+
+app.get('/metrics', async (_req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
 });
 
 app.use(errorHandler);

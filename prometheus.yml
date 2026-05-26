@@ -1,0 +1,13 @@
+# Konfiguracja Prometheusa dla GastroHub API (bez Dockera).
+# Uruchomienie — patrz docs/monitoring.md lub README w kroku 5.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: gastrohub-api
+    metrics_path: /metrics
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["localhost:5000"]
