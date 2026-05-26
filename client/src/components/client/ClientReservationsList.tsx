@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarDays, Users, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useReservations, useTables } from '../../context';
 import { useAuth } from '../../context/AuthContext';
@@ -8,6 +8,7 @@ export function ClientReservationsList() {
   const { reservations, setReservations } = useReservations();
   const { tables } = useTables();
   const { role } = useAuth();
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   useEffect(() => {
     if (!role) return;
@@ -31,13 +32,32 @@ export function ClientReservationsList() {
     };
   }, [role, setReservations]);
 
-  const myReservations = reservations;
+  const parseReservationDateTime = (date: string, time: string) => {
+    const timestamp = new Date(`${date}T${time}`).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  };
+
+  const myReservations = [...reservations].sort((a, b) => {
+    const diff = parseReservationDateTime(b.date, b.time) - parseReservationDateTime(a.date, a.time);
+    return sortOrder === 'newest' ? diff : -diff;
+  });
 
   return (
     <div className="max-w-4xl mx-auto p-6 mt-6">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-        <CalendarDays className="h-8 w-8 text-orange-500" /> Moje Rezerwacje
-      </h2>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+          <CalendarDays className="h-8 w-8 text-orange-500" /> Moje Rezerwacje
+        </h2>
+        <select
+          value={sortOrder}
+          onChange={e => setSortOrder(e.target.value as 'newest' | 'oldest')}
+          className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 bg-white"
+          aria-label="Sortowanie moich rezerwacji"
+        >
+          <option value="newest">Najnowsze</option>
+          <option value="oldest">Najstarsze</option>
+        </select>
+      </div>
       {myReservations.length === 0 ? (
         <div className="bg-white p-8 rounded-2xl shadow-sm text-center text-gray-500 border border-gray-100">
           Nie masz jeszcze żadnych rezerwacji.

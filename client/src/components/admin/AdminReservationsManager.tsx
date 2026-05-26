@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Clock, Check, X, Trash2 } from 'lucide-react';
 import { useReservations, useTables } from '../../context';
 import { useUiFeedback } from '../../context/UiFeedbackContext';
@@ -9,6 +9,7 @@ export function AdminReservationsManager() {
   const { reservations, setReservations } = useReservations();
   const { tables, setTables } = useTables();
   const { showSuccess, showError, confirm } = useUiFeedback();
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   useEffect(() => {
     let mounted = true;
@@ -72,6 +73,16 @@ export function AdminReservationsManager() {
     }
   };
 
+  const parseReservationDateTime = (date: string, time: string) => {
+    const timestamp = new Date(`${date}T${time}`).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  };
+
+  const sortedReservations = [...reservations].sort((a, b) => {
+    const diff = parseReservationDateTime(b.date, b.time) - parseReservationDateTime(a.date, a.time);
+    return sortOrder === 'newest' ? diff : -diff;
+  });
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -79,6 +90,15 @@ export function AdminReservationsManager() {
           <Clock className="h-6 w-6 text-purple-600" /> Lista Rezerwacji
         </h2>
         <div className="flex gap-2">
+          <select
+            value={sortOrder}
+            onChange={e => setSortOrder(e.target.value as 'newest' | 'oldest')}
+            className="px-3 py-2 rounded border border-gray-300 text-sm text-gray-700 bg-white"
+            aria-label="Sortowanie listy rezerwacji"
+          >
+            <option value="newest">Najnowsze</option>
+            <option value="oldest">Najstarsze</option>
+          </select>
           <button
             onClick={async () => {
               const shouldPrune = await confirm(
@@ -115,7 +135,7 @@ export function AdminReservationsManager() {
             </tr>
           </thead>
           <tbody>
-            {reservations.map(res => (
+            {sortedReservations.map(res => (
               <tr key={res.id} className="border-b last:border-0 hover:bg-gray-50">
                 <td className="p-3 font-medium text-gray-900 whitespace-nowrap">{res.clientName}</td>
                 <td className="p-3 text-gray-700 whitespace-nowrap">
